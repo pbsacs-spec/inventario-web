@@ -34,49 +34,18 @@ header h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: 0.3px; flex: 1
 }
 .btn-nav:hover { background: rgba(255,255,255,0.22); }
 
-.container { max-width: 860px; margin: 0 auto; padding: 28px 20px; display: flex; flex-direction: column; gap: 22px; }
+.container { max-width: 900px; margin: 0 auto; padding: 28px 20px; display: flex; flex-direction: column; gap: 22px; }
 
-.card {
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
-  overflow: hidden;
-}
-.card-header {
-  padding: 14px 20px;
-  background: #f6f8fa;
-  border-bottom: 1px solid #e8ecf0;
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: #1a2535;
-}
+.card { background: white; border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); overflow: hidden; }
+.card-header { padding: 14px 20px; background: #f6f8fa; border-bottom: 1px solid #e8ecf0; font-weight: 700; font-size: 0.95rem; color: #1a2535; }
 
-/* Formulario nuevo usuario */
 .form-body { padding: 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
 .field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 160px; }
 label { font-size: 0.82rem; font-weight: 600; color: #445; }
-input {
-  padding: 9px 13px;
-  border: 2px solid #dde3ec;
-  border-radius: 7px;
-  font-size: 0.9rem;
-  outline: none;
-  background: #f8f9fb;
-}
+input { padding: 9px 13px; border: 2px solid #dde3ec; border-radius: 7px; font-size: 0.9rem; outline: none; background: #f8f9fb; }
 input:focus { border-color: #3a85d8; background: white; }
-.btn-crear {
-  padding: 10px 22px;
-  background: #1a2535;
-  color: white;
-  border: none;
-  border-radius: 7px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background .14s;
-  align-self: flex-end;
-}
+
+.btn-crear { padding: 10px 22px; background: #1a2535; color: white; border: none; border-radius: 7px; font-size: 0.9rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .14s; align-self: flex-end; }
 .btn-crear:hover { background: #253550; }
 .btn-crear:disabled { background: #8a9ab0; cursor: default; }
 
@@ -84,50 +53,70 @@ input:focus { border-color: #3a85d8; background: white; }
 .msg-ok  { background: #edfaf3; color: #1a7a45; border: 1px solid #b2e8cc; }
 .msg-err { background: #fdf2f2; color: #c0392b; border: 1px solid #f5c6cb; }
 
-/* Tabla de usuarios */
 table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-thead th {
-  background: #1a2535;
-  color: #cdd8e8;
-  padding: 10px 16px;
-  text-align: left;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
+thead th { background: #1a2535; color: #cdd8e8; padding: 10px 16px; text-align: left; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
 tbody tr { border-bottom: 1px solid #f0f2f5; }
 tbody tr:last-child { border-bottom: none; }
 tbody tr:hover { background: #f9fafb; }
 tbody td { padding: 10px 16px; }
 
-.badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 0.78rem;
-  font-weight: 600;
-}
+.badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600; }
 .badge-activo   { background: #edfaf3; color: #1a7a45; }
 .badge-inactivo { background: #f5f5f5; color: #888; }
 
-.btn-toggle {
-  padding: 5px 14px;
-  border-radius: 5px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-  transition: background .14s;
-}
+.acciones { display: flex; gap: 6px; }
+.btn-accion { padding: 5px 12px; border-radius: 5px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: none; transition: background .14s; white-space: nowrap; }
+.btn-editar     { background: #e8f0fb; color: #2d6db8; }
+.btn-editar:hover { background: #cfe0f7; }
 .btn-desactivar { background: #fdecea; color: #c0392b; }
 .btn-desactivar:hover { background: #f5c6c2; }
 .btn-activar    { background: #edfaf3; color: #1a7a45; }
 .btn-activar:hover { background: #b2e8cc; }
-.btn-toggle:disabled { opacity: .45; cursor: default; }
+.btn-accion:disabled { opacity: .45; cursor: default; }
 
 .empty { padding: 36px; text-align: center; color: #a0aab8; font-size: 0.9rem; }
 .loading-row td { text-align: center; padding: 28px; color: #a0aab8; }
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.visible { display: flex; }
+.modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  width: 100%;
+  max-width: 420px;
+  margin: 20px;
+  overflow: hidden;
+}
+.modal-header {
+  padding: 16px 20px;
+  background: #f6f8fa;
+  border-bottom: 1px solid #e8ecf0;
+  font-weight: 700;
+  font-size: 0.97rem;
+  color: #1a2535;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #7f8c8d; line-height: 1; }
+.modal-close:hover { color: #2c3e50; }
+.modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.modal-footer { padding: 14px 20px; background: #f6f8fa; border-top: 1px solid #e8ecf0; display: flex; justify-content: flex-end; gap: 10px; }
+.btn-cancelar { padding: 9px 18px; background: #e8ecf0; color: #445; border: none; border-radius: 7px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+.btn-cancelar:hover { background: #d5dce6; }
+.btn-guardar  { padding: 9px 22px; background: #1a2535; color: white; border: none; border-radius: 7px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+.btn-guardar:hover { background: #253550; }
+.btn-guardar:disabled { background: #8a9ab0; cursor: default; }
+.hint { font-size: 0.78rem; color: #a0aab8; margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -143,7 +132,6 @@ tbody td { padding: 10px 16px; }
 
 <div class="container">
 
-  <!-- Nuevo usuario -->
   <div class="card">
     <div class="card-header">Agregar usuario</div>
     <div class="form-body">
@@ -164,7 +152,6 @@ tbody td { padding: 10px 16px; }
     <div id="form-msg" style="display:none"></div>
   </div>
 
-  <!-- Lista de usuarios -->
   <div class="card">
     <div class="card-header">Usuarios registrados</div>
     <table>
@@ -185,6 +172,37 @@ tbody td { padding: 10px 16px; }
 
 </div>
 
+<!-- Modal editar -->
+<div class="modal-overlay" id="modal-overlay" onclick="cerrarModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span>Editar usuario</span>
+      <button class="modal-close" onclick="cerrarModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="m-id" />
+      <div class="field">
+        <label>Usuario</label>
+        <input type="text" id="m-usuario" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>Nombre completo</label>
+        <input type="text" id="m-nombre" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>Nueva contraseña</label>
+        <input type="password" id="m-password" placeholder="Dejar vacío para no cambiar" />
+        <span class="hint">Mínimo 6 caracteres si se ingresa</span>
+      </div>
+      <div id="modal-msg" style="display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-guardar" id="btn-guardar" onclick="guardarEdicion()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 async function cargarUsuarios() {
   const tbody = document.getElementById('tabla-usuarios');
@@ -203,10 +221,16 @@ async function cargarUsuarios() {
         <td><span class="badge ${u.activo ? 'badge-activo' : 'badge-inactivo'}">${u.activo ? 'Activo' : 'Inactivo'}</span></td>
         <td>${formatFecha(u.creado_en)}</td>
         <td>
-          <button class="btn-toggle ${u.activo ? 'btn-desactivar' : 'btn-activar'}"
-                  onclick="toggleUsuario(${u.id}, ${u.activo})">
-            ${u.activo ? 'Desactivar' : 'Activar'}
-          </button>
+          <div class="acciones">
+            <button class="btn-accion btn-editar"
+                    onclick="abrirModal(${u.id}, '${esc(u.usuario)}', '${esc(u.nombre || '')}')">
+              Editar
+            </button>
+            <button class="btn-accion ${u.activo ? 'btn-desactivar' : 'btn-activar'}"
+                    onclick="toggleUsuario(${u.id}, ${u.activo})">
+              ${u.activo ? 'Desactivar' : 'Activar'}
+            </button>
+          </div>
         </td>
       </tr>
     `).join('');
@@ -220,13 +244,11 @@ async function crearUsuario() {
   const nombre   = document.getElementById('f-nombre').value.trim();
   const password = document.getElementById('f-password').value;
   const btn      = document.getElementById('btn-crear');
-  const msgDiv   = document.getElementById('form-msg');
 
-  if (!usuario || !password) { mostrarMsg('Completa usuario y contraseña', false); return; }
-  if (password.length < 6)   { mostrarMsg('La contraseña debe tener al menos 6 caracteres', false); return; }
+  if (!usuario || !password) { mostrarMsg('form-msg', 'Completa usuario y contraseña', false); return; }
+  if (password.length < 6)   { mostrarMsg('form-msg', 'La contraseña debe tener al menos 6 caracteres', false); return; }
 
-  btn.disabled = true;
-  btn.textContent = 'Guardando…';
+  btn.disabled = true; btn.textContent = 'Guardando…';
   try {
     const r = await fetch('/api/admin/usuarios', {
       method: 'POST',
@@ -236,59 +258,105 @@ async function crearUsuario() {
     if (r.status === 401) { location.href = '/login'; return; }
     const d = await r.json();
     if (d.ok) {
-      mostrarMsg(`Usuario "${usuario}" creado correctamente`, true);
+      mostrarMsg('form-msg', `Usuario "${usuario}" creado correctamente`, true);
       document.getElementById('f-usuario').value  = '';
       document.getElementById('f-nombre').value   = '';
       document.getElementById('f-password').value = '';
       cargarUsuarios();
     } else {
-      mostrarMsg(d.mensaje || 'Error al crear usuario', false);
+      mostrarMsg('form-msg', d.mensaje || 'Error al crear usuario', false);
     }
   } catch (_) {
-    mostrarMsg('Error de conexión', false);
+    mostrarMsg('form-msg', 'Error de conexión', false);
   } finally {
-    btn.disabled = false;
-    btn.textContent = 'Agregar';
+    btn.disabled = false; btn.textContent = 'Agregar';
   }
 }
 
 async function toggleUsuario(id, activoActual) {
   const fila = document.getElementById('row-' + id);
-  const btn  = fila.querySelector('button');
-  btn.disabled = true;
+  fila.querySelectorAll('button').forEach(b => b.disabled = true);
   try {
     const r = await fetch(`/api/admin/usuarios/${id}/toggle`, { method: 'POST' });
     if (r.status === 401) { location.href = '/login'; return; }
     const d = await r.json();
-    if (d.ok) {
-      cargarUsuarios();
-    } else {
-      alert(d.mensaje || 'Error');
-      btn.disabled = false;
-    }
+    if (d.ok) { cargarUsuarios(); }
+    else { alert(d.mensaje || 'Error'); fila.querySelectorAll('button').forEach(b => b.disabled = false); }
   } catch (_) {
     alert('Error de conexión');
-    btn.disabled = false;
+    fila.querySelectorAll('button').forEach(b => b.disabled = false);
   }
 }
 
-function mostrarMsg(texto, ok) {
-  const div = document.getElementById('form-msg');
+function abrirModal(id, usuario, nombre) {
+  document.getElementById('m-id').value       = id;
+  document.getElementById('m-usuario').value  = usuario;
+  document.getElementById('m-nombre').value   = nombre;
+  document.getElementById('m-password').value = '';
+  document.getElementById('modal-msg').style.display = 'none';
+  document.getElementById('modal-overlay').classList.add('visible');
+  document.getElementById('m-usuario').focus();
+}
+
+function cerrarModal(e) {
+  if (e && e.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').classList.remove('visible');
+}
+
+async function guardarEdicion() {
+  const id       = parseInt(document.getElementById('m-id').value);
+  const usuario  = document.getElementById('m-usuario').value.trim();
+  const nombre   = document.getElementById('m-nombre').value.trim();
+  const password = document.getElementById('m-password').value;
+  const btn      = document.getElementById('btn-guardar');
+
+  if (!usuario) { mostrarMsg('modal-msg', 'El usuario no puede estar vacío', false); return; }
+  if (password && password.length < 6) { mostrarMsg('modal-msg', 'La contraseña debe tener al menos 6 caracteres', false); return; }
+
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    const body = { usuario, nombre };
+    if (password) body.password = password;
+    const r = await fetch(`/api/admin/usuarios/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (r.status === 401) { location.href = '/login'; return; }
+    const d = await r.json();
+    if (d.ok) {
+      document.getElementById('modal-overlay').classList.remove('visible');
+      cargarUsuarios();
+    } else {
+      mostrarMsg('modal-msg', d.mensaje || 'Error al guardar', false);
+    }
+  } catch (_) {
+    mostrarMsg('modal-msg', 'Error de conexión', false);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
+}
+
+function mostrarMsg(id, texto, ok) {
+  const div = document.getElementById(id);
   div.className = 'msg ' + (ok ? 'msg-ok' : 'msg-err');
   div.textContent = texto;
   div.style.display = 'block';
-  setTimeout(() => { div.style.display = 'none'; }, 4000);
+  if (ok) setTimeout(() => { div.style.display = 'none'; }, 4000);
 }
 
 function formatFecha(f) {
   if (!f) return '—';
-  const d = new Date(f);
-  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+  return new Date(f).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('modal-overlay').classList.remove('visible');
+});
 
 cargarUsuarios();
 </script>

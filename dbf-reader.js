@@ -158,8 +158,19 @@ async function toggleUsuario(id) {
   await query('UPDATE usuarios SET activo = NOT activo WHERE id = ?', [id]);
 }
 
+async function actualizarUsuario(id, campos) {
+  const sets = [];
+  const vals = [];
+  if (campos.nombre   !== undefined) { sets.push('nombre = ?');        vals.push(campos.nombre); }
+  if (campos.usuario  !== undefined) { sets.push('usuario = ?');       vals.push(campos.usuario); }
+  if (campos.password_hash !== undefined) { sets.push('password_hash = ?'); vals.push(campos.password_hash); }
+  if (!sets.length) return;
+  vals.push(id);
+  await query(`UPDATE usuarios SET ${sets.join(', ')} WHERE id = ?`, vals);
+}
+
 module.exports = {
   consultarExistencias, resumenPorCategoria, listarCategorias, buscarClientes, limpiarCache,
   crearTablas, buscarUsuario, contarUsuarios, crearUsuario, registrarConsulta,
-  listarUsuarios, toggleUsuario,
+  listarUsuarios, toggleUsuario, actualizarUsuario,
 };

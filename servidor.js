@@ -13,6 +13,7 @@ const {
   registrarConsulta,
   listarUsuarios,
   toggleUsuario,
+  actualizarUsuario,
 } = require('./dbf-reader');
 
 const app  = express();
@@ -222,6 +223,28 @@ app.post('/api/admin/usuarios', requireAuth, async (req, res) => {
     if (existe) return res.status(409).json({ ok: false, mensaje: 'El usuario ya existe' });
     const hash = await bcrypt.hash(password, 10);
     await crearUsuario(usuario, hash, nombre || usuario);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, mensaje: err.message });
+  }
+});
+
+app.put('/api/admin/usuarios/:id', requireAuth, async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { nombre, usuario, password } = req.body;
+  try {
+    if (usuario) {
+      const existe = await buscarUsuario(usuario);
+      if (existe && existe.id !== id) return res.status(409).json({ ok: false, mensaje: 'Ese usuario ya existe' });
+    }
+    const campos = {};
+    if (nombre   !== undefined) campos.nombre  = nombre;
+    if (usuario  !== undefined) campos.usuario = usuario;
+    if (password) {
+      if (password.length < 6) return res.status(400).json({ ok: false, mensaje: 'La contraseña debe tener al menos 6 caracteres' });
+      campos.password_hash = await bcrypt.hash(password, 10);
+    }
+    await actualizarUsuario(id, campos);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, mensaje: err.message });
