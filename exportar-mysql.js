@@ -30,7 +30,7 @@ function esc(v) {
   return "'" + String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
 }
 
-function exportTable(name, ddl) {
+function exportTable(name, ddl, onlyCols = null) {
   lines.push(`-- Tabla: ${name}`);
   lines.push(`DROP TABLE IF EXISTS \`${name}\`;`);
   lines.push(ddl + ';');
@@ -39,7 +39,7 @@ function exportTable(name, ddl) {
   const rows = db.prepare(`SELECT * FROM ${name}`).all();
   if (rows.length === 0) return;
 
-  const cols = Object.keys(rows[0]);
+  const cols = onlyCols || Object.keys(rows[0]);
   const colList = cols.map(c => `\`${c}\``).join(', ');
 
   const CHUNK = 200;
@@ -86,7 +86,8 @@ exportTable('clientes', `CREATE TABLE \`clientes\` (
   \`cve_age\`    INT,
   \`contacto\`   TEXT,
   \`email_cte\`  TEXT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+['cve_cte', 'nom_cte', 'rfc_cte', 'tel1_cte', 'movil_cte', 'lim_cre', 'dia_cre', 'cve_age', 'contacto', 'email_cte']);
 
 lines.push('SET foreign_key_checks = 1;');
 
