@@ -18,7 +18,22 @@ header {
   box-shadow: 0 2px 8px rgba(0,0,0,0.25);
 }
 header .icon { font-size: 1.5rem; }
-header h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: 0.3px; }
+header h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: 0.3px; flex: 1; }
+.user-info { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; }
+.user-name { opacity: .8; }
+.btn-logout {
+  padding: 5px 13px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 5px;
+  color: white;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .14s;
+}
+.btn-logout:hover { background: rgba(255,255,255,0.22); }
 
 .container { max-width: 1280px; margin: 0 auto; padding: 24px 20px; }
 
@@ -197,6 +212,10 @@ pre {
 <header>
   <span class="icon">📦</span>
   <h1>Consulta de Inventario</h1>
+  <div class="user-info">
+    <span class="user-name" id="userName"></span>
+    <a class="btn-logout" href="/auth/logout">Salir</a>
+  </div>
 </header>
 
 <div class="container">
@@ -226,6 +245,15 @@ pre {
 <script>
 let ultimaConsulta = '';
 
+(async () => {
+  try {
+    const r = await fetch('/api/me');
+    if (r.status === 401) { location.href = '/login'; return; }
+    const d = await r.json();
+    if (d.ok) document.getElementById('userName').textContent = d.nombre;
+  } catch (_) {}
+})();
+
 function setQuery(q) {
   document.getElementById('q').value = q;
   consultar();
@@ -249,6 +277,7 @@ async function consultar() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ q }),
     });
+    if (res.status === 401) { location.href = '/login'; return; }
     const data = await res.json();
     renderResultado(data);
   } catch (err) {

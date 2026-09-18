@@ -100,4 +100,56 @@ async function buscarClientes(params = {}) {
 
 function limpiarCache() { /* no-op en MySQL */ }
 
-module.exports = { consultarExistencias, resumenPorCategoria, listarCategorias, buscarClientes, limpiarCache };
+// ── Auth / usuarios ───────────────────────────────────────────────────────────
+
+async function crearTablas() {
+  await query(`CREATE TABLE IF NOT EXISTS usuarios (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    usuario       VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    nombre        VARCHAR(100),
+    activo        TINYINT(1) DEFAULT 1,
+    creado_en     DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await query(`CREATE TABLE IF NOT EXISTS consultas_log (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT,
+    usuario    VARCHAR(50),
+    consulta   TEXT,
+    tipo       VARCHAR(20),
+    ip         VARCHAR(45),
+    fecha      DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+}
+
+async function buscarUsuario(usuario) {
+  const rows = await query(
+    'SELECT * FROM usuarios WHERE usuario = ? AND activo = 1 LIMIT 1',
+    [usuario],
+  );
+  return rows[0] || null;
+}
+
+async function contarUsuarios() {
+  const rows = await query('SELECT COUNT(*) AS n FROM usuarios');
+  return rows[0].n;
+}
+
+async function crearUsuario(usuario, password_hash, nombre) {
+  await query(
+    'INSERT INTO usuarios (usuario, password_hash, nombre) VALUES (?, ?, ?)',
+    [usuario, password_hash, nombre || usuario],
+  );
+}
+
+async function registrarConsulta(usuario_id, usuario, consulta, tipo, ip) {
+  await query(
+    'INSERT INTO consultas_log (usuario_id, usuario, consulta, tipo, ip) VALUES (?, ?, ?, ?, ?)',
+    [usuario_id, usuario, consulta, tipo, ip || ''],
+  );
+}
+
+module.exports = {
+  consultarExistencias, resumenPorCategoria, listarCategorias, buscarClientes, limpiarCache,
+  crearTablas, buscarUsuario, contarUsuarios, crearUsuario, registrarConsulta,
+};
