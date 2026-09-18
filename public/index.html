@@ -215,8 +215,9 @@ pre {
   <div class="user-info">
     <span class="user-name" id="userName"></span>
     <a class="btn-logout" href="/clientes">Clientes</a>
-    <a class="btn-logout" id="btn-ajustes" href="/ajustes" style="display:none">Ajustes</a>
-    <a class="btn-logout" id="btn-admin" href="/admin" style="display:none">Admin</a>
+    <a class="btn-logout" id="btn-ajustes"  href="/ajustes"  style="display:none">Ajustes</a>
+    <a class="btn-logout" id="btn-reportes" href="/reportes" style="display:none">Reportes</a>
+    <a class="btn-logout" id="btn-admin"    href="/admin"    style="display:none">Admin</a>
     <a class="btn-logout" href="/auth/logout">Salir</a>
   </div>
 </header>
@@ -256,8 +257,9 @@ let ultimaConsulta = '';
     if (d.ok) {
       document.getElementById('userName').textContent = d.nombre;
       if (d.rol === 'admin') {
-        document.getElementById('btn-admin').style.display   = '';
-        document.getElementById('btn-ajustes').style.display = '';
+        document.getElementById('btn-admin').style.display    = '';
+        document.getElementById('btn-ajustes').style.display  = '';
+        document.getElementById('btn-reportes').style.display = '';
       }
     }
   } catch (_) {}

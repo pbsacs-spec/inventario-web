@@ -22,6 +22,8 @@ const {
   buscarProductosParaMovimiento,
   registrarMovimiento,
   listarMovimientos,
+  listarConsultas,
+  estadisticasConsultas,
 } = require('./dbf-reader');
 
 const app  = express();
@@ -212,6 +214,38 @@ app.get('/api/txt', requireAuth, async (req, res) => {
     return res.send(limpio);
   } catch (err) {
     res.status(500).send('Error al generar TXT: ' + err.message);
+  }
+});
+
+// ── Reportes ──────────────────────────────────────────────────────────────────
+
+app.get('/reportes', (req, res) => {
+  if (!req.session || !req.session.userId) return res.redirect('/login');
+  if (req.session.rol !== 'admin') return res.redirect('/');
+  res.sendFile(path.join(__dirname, 'public', 'reportes.html'));
+});
+
+app.get('/api/reportes/stats', requireAdmin, async (req, res) => {
+  try {
+    const stats = await estadisticasConsultas();
+    res.json({ ok: true, ...stats });
+  } catch (err) {
+    res.status(500).json({ ok: false, mensaje: err.message });
+  }
+});
+
+app.get('/api/reportes/consultas', requireAdmin, async (req, res) => {
+  const { usuario, tipo, fecha_desde, fecha_hasta } = req.query;
+  try {
+    const consultas = await listarConsultas({
+      usuario:     usuario     || undefined,
+      tipo:        tipo        || undefined,
+      fecha_desde: fecha_desde || undefined,
+      fecha_hasta: fecha_hasta || undefined,
+    });
+    res.json({ ok: true, consultas, total: consultas.length });
+  } catch (err) {
+    res.status(500).json({ ok: false, mensaje: err.message });
   }
 });
 

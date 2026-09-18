@@ -222,6 +222,31 @@ async function actualizarUsuario(id, campos) {
   await query(`UPDATE usuarios SET ${sets.join(', ')} WHERE id = ?`, vals);
 }
 
+// ── Reportes / consultas_log ──────────────────────────────────────────────────
+
+async function listarConsultas({ usuario, tipo, fecha_desde, fecha_hasta } = {}) {
+  let sql = `SELECT id, usuario, consulta, tipo, ip, fecha FROM consultas_log WHERE 1=1`;
+  const args = [];
+  if (usuario)     { sql += ' AND usuario LIKE ?';   args.push('%' + usuario + '%'); }
+  if (tipo)        { sql += ' AND tipo = ?';         args.push(tipo); }
+  if (fecha_desde) { sql += ' AND DATE(fecha) >= ?'; args.push(fecha_desde); }
+  if (fecha_hasta) { sql += ' AND DATE(fecha) <= ?'; args.push(fecha_hasta); }
+  sql += ' ORDER BY fecha DESC LIMIT 500';
+  return query(sql, args);
+}
+
+async function estadisticasConsultas() {
+  const [r1, r2, r3, top] = await Promise.all([
+    query(`SELECT COUNT(*) AS n FROM consultas_log WHERE DATE(fecha) = CURDATE()`),
+    query(`SELECT COUNT(*) AS n FROM consultas_log WHERE fecha >= DATE_SUB(NOW(), INTERVAL 7 DAY)`),
+    query(`SELECT COUNT(*) AS n FROM consultas_log WHERE fecha >= DATE_SUB(NOW(), INTERVAL 30 DAY)`),
+    query(`SELECT usuario, COUNT(*) AS total FROM consultas_log
+           WHERE fecha >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+           GROUP BY usuario ORDER BY total DESC LIMIT 6`),
+  ]);
+  return { hoy: r1[0].n, semana: r2[0].n, mes: r3[0].n, topUsuarios: top };
+}
+
 // ── Conceptos de movimiento ───────────────────────────────────────────────────
 
 async function listarConceptos(soloActivos = true) {
@@ -315,4 +340,5 @@ module.exports = {
   listarUsuarios, toggleUsuario, actualizarUsuario, importarSQL,
   listarConceptos, crearConcepto, toggleConcepto,
   buscarProductosParaMovimiento, registrarMovimiento, listarMovimientos,
+  listarConsultas, estadisticasConsultas,
 };

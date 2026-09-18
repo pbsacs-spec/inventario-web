@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reportes · Inventario</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #2c3e50; min-height: 100vh; }
+
+header { background: #1a2535; color: white; padding: 14px 28px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
+header .icon { font-size: 1.5rem; }
+header h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: 0.3px; flex: 1; }
+.header-links { display: flex; gap: 10px; }
+.btn-nav { padding: 5px 13px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: 5px; color: white; font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: background .14s; }
+.btn-nav:hover { background: rgba(255,255,255,0.22); }
+
+.container { max-width: 1200px; margin: 0 auto; padding: 24px 20px; display: flex; flex-direction: column; gap: 20px; }
+
+/* Stats */
+.stats-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.stat-card {
+  flex: 1; min-width: 140px;
+  background: white; border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  padding: 18px 22px; display: flex; flex-direction: column; gap: 4px;
+}
+.stat-label { font-size: 0.8rem; font-weight: 600; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.4px; }
+.stat-num   { font-size: 2.2rem; font-weight: 700; color: #1a2535; line-height: 1.1; }
+.stat-sub   { font-size: 0.78rem; color: #a0aab8; }
+
+/* Top usuarios */
+.top-card { background: white; border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 18px 22px; flex: 1; min-width: 200px; }
+.top-card h3 { font-size: 0.8rem; font-weight: 600; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 12px; }
+.top-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid #f0f2f5; font-size: 0.87rem; }
+.top-row:last-child { border-bottom: none; }
+.top-usuario { flex: 1; font-weight: 600; color: #2c3e50; }
+.top-bar-wrap { flex: 2; background: #f0f2f5; border-radius: 4px; height: 7px; overflow: hidden; }
+.top-bar { background: #3a85d8; height: 100%; border-radius: 4px; transition: width .4s; }
+.top-total { font-size: 0.8rem; color: #637083; min-width: 28px; text-align: right; }
+.top-empty { font-size: 0.85rem; color: #a0aab8; padding: 8px 0; }
+
+/* Card */
+.card { background: white; border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); overflow: hidden; }
+.card-header { padding: 13px 20px; background: #f6f8fa; border-bottom: 1px solid #e8ecf0; font-weight: 700; font-size: 0.95rem; color: #1a2535; display: flex; align-items: center; justify-content: space-between; }
+.result-count { font-size: 0.82rem; font-weight: 400; color: #7f8c8d; }
+
+/* Filtros */
+.filtros { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px 20px; background: #f6f8fa; border-bottom: 1px solid #e8ecf0; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 130px; }
+.field label { font-size: 0.82rem; font-weight: 600; color: #445; }
+input[type="text"], input[type="date"], select {
+  padding: 9px 13px; border: 2px solid #dde3ec; border-radius: 7px;
+  font-size: 0.9rem; outline: none; background: #f8f9fb; font-family: inherit;
+}
+input:focus, select:focus { border-color: #3a85d8; background: white; }
+.btn-buscar { padding: 9px 18px; background: #3a85d8; color: white; border: none; border-radius: 7px; font-size: 0.88rem; font-weight: 600; cursor: pointer; white-space: nowrap; align-self: flex-end; }
+.btn-buscar:hover { background: #2d6db8; }
+.btn-limpiar { padding: 9px 14px; background: #f0f2f5; color: #637083; border: none; border-radius: 7px; font-size: 0.88rem; font-weight: 600; cursor: pointer; white-space: nowrap; align-self: flex-end; }
+.btn-limpiar:hover { background: #e2e6ea; }
+
+/* Tabla */
+.table-wrap { overflow: auto; max-height: 60vh; }
+table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+thead th { position: sticky; top: 0; background: #1a2535; color: #cdd8e8; padding: 9px 14px; white-space: nowrap; font-weight: 600; font-size: 0.8rem; letter-spacing: 0.4px; text-transform: uppercase; z-index: 1; text-align: left; }
+tbody tr { border-bottom: 1px solid #f0f2f5; }
+tbody tr:hover { background: #f4f7fd; }
+tbody td { padding: 8px 14px; color: #2c3e50; }
+tbody tr:nth-child(even) { background: #fafbfc; }
+tbody tr:nth-child(even):hover { background: #f4f7fd; }
+.consulta-td { max-width: 460px; white-space: normal; word-break: break-word; }
+
+/* Badges */
+.badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
+.badge-consulta { background: #e8f0fb; color: #2d6db8; }
+.badge-pdf      { background: #fdecea; color: #c0392b; }
+.badge-txt      { background: #edfaf3; color: #1a7a45; }
+
+/* Estados */
+.empty-cell, .loading-cell, .error-cell { text-align: center; padding: 40px; color: #a0aab8; font-size: 0.9rem; }
+.error-cell { color: #c0392b; }
+.spinner { display: inline-block; width: 18px; height: 18px; border: 3px solid #dde; border-top-color: #3a85d8; border-radius: 50%; animation: spin .75s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="icon">📊</span>
+  <h1>Reportes</h1>
+  <div class="header-links">
+    <a class="btn-nav" href="/">← Inventario</a>
+    <a class="btn-nav" href="/auth/logout">Salir</a>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Stats + Top usuarios -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card">
+      <span class="stat-label">Hoy</span>
+      <span class="stat-num" id="stat-hoy">—</span>
+      <span class="stat-sub">consultas</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Últimos 7 días</span>
+      <span class="stat-num" id="stat-semana">—</span>
+      <span class="stat-sub">consultas</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Últimos 30 días</span>
+      <span class="stat-num" id="stat-mes">—</span>
+      <span class="stat-sub">consultas</span>
+    </div>
+    <div class="top-card">
+      <h3>Top usuarios (30 días)</h3>
+      <div id="top-usuarios"><span class="top-empty">Cargando…</span></div>
+    </div>
+  </div>
+
+  <!-- Historial de consultas -->
+  <div class="card">
+    <div class="card-header">
+      <span>Historial de consultas</span>
+      <span class="result-count" id="result-count"></span>
+    </div>
+    <div class="filtros">
+      <div class="field" style="max-width:180px;">
+        <label>Usuario</label>
+        <input type="text" id="fil-usuario" placeholder="Filtrar usuario…" autocomplete="off" />
+      </div>
+      <div class="field" style="max-width:150px;">
+        <label>Tipo</label>
+        <select id="fil-tipo">
+          <option value="">Todos</option>
+          <option value="consulta">Consulta</option>
+          <option value="pdf">PDF</option>
+          <option value="txt">TXT</option>
+        </select>
+      </div>
+      <div class="field" style="max-width:160px;">
+        <label>Desde</label>
+        <input type="date" id="fil-desde" />
+      </div>
+      <div class="field" style="max-width:160px;">
+        <label>Hasta</label>
+        <input type="date" id="fil-hasta" />
+      </div>
+      <button class="btn-buscar" onclick="cargarConsultas()">Buscar</button>
+      <button class="btn-limpiar" onclick="limpiarFiltros()">Limpiar</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Usuario</th>
+            <th>Tipo</th>
+            <th>Consulta</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-consultas">
+          <tr><td colspan="4" class="loading-cell"><span class="spinner"></span>Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async () => {
+  const r = await fetch('/api/me');
+  if (r.status === 401) { location.href = '/login'; return; }
+  cargarStats();
+  cargarConsultas();
+})();
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+async function cargarStats() {
+  try {
+    const r = await fetch('/api/reportes/stats');
+    if (r.status === 401) { location.href = '/login'; return; }
+    const d = await r.json();
+    if (!d.ok) return;
+
+    document.getElementById('stat-hoy').textContent    = d.hoy.toLocaleString('es-MX');
+    document.getElementById('stat-semana').textContent = d.semana.toLocaleString('es-MX');
+    document.getElementById('stat-mes').textContent    = d.mes.toLocaleString('es-MX');
+
+    const top = document.getElementById('top-usuarios');
+    if (!d.topUsuarios.length) {
+      top.innerHTML = '<span class="top-empty">Sin datos</span>';
+      return;
+    }
+    const max = d.topUsuarios[0].total;
+    top.innerHTML = d.topUsuarios.map(u => `
+      <div class="top-row">
+        <span class="top-usuario">${esc(u.usuario)}</span>
+        <div class="top-bar-wrap">
+          <div class="top-bar" style="width:${Math.round((u.total / max) * 100)}%"></div>
+        </div>
+        <span class="top-total">${u.total}</span>
+      </div>`).join('');
+  } catch (_) {}
+}
+
+// ── Consultas ─────────────────────────────────────────────────────────────────
+async function cargarConsultas() {
+  const tbody = document.getElementById('tabla-consultas');
+  tbody.innerHTML = '<tr><td colspan="4" class="loading-cell"><span class="spinner"></span>Buscando…</td></tr>';
+  document.getElementById('result-count').textContent = '';
+
+  const p = new URLSearchParams();
+  const usuario = document.getElementById('fil-usuario').value.trim();
+  const tipo    = document.getElementById('fil-tipo').value;
+  const desde   = document.getElementById('fil-desde').value;
+  const hasta   = document.getElementById('fil-hasta').value;
+  if (usuario) p.set('usuario', usuario);
+  if (tipo)    p.set('tipo', tipo);
+  if (desde)   p.set('fecha_desde', desde);
+  if (hasta)   p.set('fecha_hasta', hasta);
+
+  try {
+    const r = await fetch('/api/reportes/consultas?' + p);
+    if (r.status === 401) { location.href = '/login'; return; }
+    const d = await r.json();
+    if (!d.ok) {
+      tbody.innerHTML = `<tr><td colspan="4" class="error-cell">${esc(d.mensaje)}</td></tr>`;
+      return;
+    }
+    const total = d.consultas.length;
+    document.getElementById('result-count').textContent =
+      total === 500 ? 'Mostrando 500 más recientes' : `${total} ${total === 1 ? 'registro' : 'registros'}`;
+
+    if (!total) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">Sin resultados para los filtros seleccionados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = d.consultas.map(c => `
+      <tr>
+        <td style="white-space:nowrap">${fmtFecha(c.fecha)}</td>
+        <td style="white-space:nowrap"><strong>${esc(c.usuario || '—')}</strong></td>
+        <td>${badgeTipo(c.tipo)}</td>
+        <td class="consulta-td">${esc(c.consulta || '—')}</td>
+      </tr>`).join('');
+  } catch (_) {
+    tbody.innerHTML = '<tr><td colspan="4" class="error-cell">Error de conexión</td></tr>';
+  }
+}
+
+function limpiarFiltros() {
+  document.getElementById('fil-usuario').value = '';
+  document.getElementById('fil-tipo').value    = '';
+  document.getElementById('fil-desde').value   = '';
+  document.getElementById('fil-hasta').value   = '';
+  cargarConsultas();
+}
+
+// ── Utilidades ────────────────────────────────────────────────────────────────
+function badgeTipo(tipo) {
+  const map = { consulta: 'badge-consulta', pdf: 'badge-pdf', txt: 'badge-txt' };
+  const cls = map[tipo] || 'badge-consulta';
+  return `<span class="badge ${cls}">${esc(tipo || 'consulta')}</span>`;
+}
+
+function fmtFecha(f) {
+  if (!f) return '—';
+  return new Date(f).toLocaleString('es-MX', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('fil-usuario').addEventListener('keydown', e => {
+  if (e.key === 'Enter') cargarConsultas();
+});
+</script>
+</body>
+</html>
