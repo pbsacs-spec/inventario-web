@@ -18,7 +18,7 @@ function limpiarQuery(q) {
 }
 
 // POST /api/consulta
-app.post('/api/consulta', (req, res) => {
+app.post('/api/consulta', async (req, res) => {
   const q = (req.body.q || '').trim();
   if (!q) return res.json({ tipo: 'error', mensaje: 'Consulta vacía' });
 
@@ -78,7 +78,7 @@ app.get('/api/pdf', async (req, res) => {
 });
 
 // GET /api/txt?q=...
-app.get('/api/txt', (req, res) => {
+app.get('/api/txt', async (req, res) => {
   const q = (req.query.q || '').trim();
   if (!q) return res.status(400).send('Consulta vacía');
 
