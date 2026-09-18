@@ -14,12 +14,13 @@ const {
   listarUsuarios,
   toggleUsuario,
   actualizarUsuario,
+  importarSQL,
 } = require('./dbf-reader');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'inventario-secret-cambiar',
@@ -256,6 +257,25 @@ app.post('/api/admin/usuarios/:id/toggle', requireAuth, async (req, res) => {
   if (id === req.session.userId) return res.status(400).json({ ok: false, mensaje: 'No puedes desactivar tu propia cuenta' });
   try {
     await toggleUsuario(id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, mensaje: err.message });
+  }
+});
+
+// ── Admin: importar SQL ───────────────────────────────────────────────────────
+
+app.post('/api/admin/importar', requireAuth, async (req, res) => {
+  const { sql } = req.body;
+  if (!sql || typeof sql !== 'string') return res.status(400).json({ ok: false, mensaje: 'No se recibió contenido SQL' });
+
+  // Proteger tablas del sistema
+  if (/\b(usuarios|consultas_log)\b/i.test(sql)) {
+    return res.status(400).json({ ok: false, mensaje: 'El archivo SQL no puede contener operaciones sobre usuarios o consultas_log' });
+  }
+
+  try {
+    await importarSQL(sql);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, mensaje: err.message });

@@ -158,6 +158,23 @@ async function toggleUsuario(id) {
   await query('UPDATE usuarios SET activo = NOT activo WHERE id = ?', [id]);
 }
 
+async function importarSQL(sql) {
+  const conn = await mysql.createConnection({
+    host:               process.env.DB_HOST     || 'localhost',
+    port:               parseInt(process.env.DB_PORT || '3306'),
+    user:               process.env.DB_USER     || 'root',
+    password:           process.env.DB_PASSWORD || process.env.DB_PASS || '',
+    database:           process.env.DB_NAME     || 'inventario',
+    charset:            'utf8mb4',
+    multipleStatements: true,
+  });
+  try {
+    await conn.query(sql);
+  } finally {
+    await conn.end();
+  }
+}
+
 async function actualizarUsuario(id, campos) {
   const sets = [];
   const vals = [];
@@ -172,5 +189,5 @@ async function actualizarUsuario(id, campos) {
 module.exports = {
   consultarExistencias, resumenPorCategoria, listarCategorias, buscarClientes, limpiarCache,
   crearTablas, buscarUsuario, contarUsuarios, crearUsuario, registrarConsulta,
-  listarUsuarios, toggleUsuario, actualizarUsuario,
+  listarUsuarios, toggleUsuario, actualizarUsuario, importarSQL,
 };

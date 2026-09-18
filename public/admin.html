@@ -152,6 +152,24 @@ tbody td { padding: 10px 16px; }
     <div id="form-msg" style="display:none"></div>
   </div>
 
+  <!-- Importar datos -->
+  <div class="card">
+    <div class="card-header">Importar datos de inventario</div>
+    <div class="form-body" style="flex-direction:column; align-items:stretch;">
+      <div style="background:#fffbe6; border:1px solid #f5d76e; border-radius:7px; padding:11px 14px; font-size:0.84rem; color:#7a6000; line-height:1.5;">
+        <strong>Advertencia:</strong> esta operación reemplaza completamente las tablas
+        <code>productos</code>, <code>existencias</code> y <code>clientes</code>.
+        No afecta usuarios ni historial de consultas.<br>
+        Sube el archivo <code>inventario.sql</code> generado localmente con <code>node exportar-mysql.js</code>.
+      </div>
+      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <input type="file" id="f-sql" accept=".sql" style="flex:1; min-width:200px; background:white;" />
+        <button class="btn-crear" id="btn-importar" onclick="importarSQL()">Importar</button>
+      </div>
+      <div id="import-msg" style="display:none"></div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-header">Usuarios registrados</div>
     <table>
@@ -357,6 +375,43 @@ function esc(s) {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') document.getElementById('modal-overlay').classList.remove('visible');
 });
+
+async function importarSQL() {
+  const input = document.getElementById('f-sql');
+  const btn   = document.getElementById('btn-importar');
+  if (!input.files.length) { mostrarMsg('import-msg', 'Selecciona un archivo .sql primero', false); return; }
+
+  const file = input.files[0];
+  if (!file.name.endsWith('.sql')) { mostrarMsg('import-msg', 'El archivo debe tener extensión .sql', false); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Importando…';
+  mostrarMsg('import-msg', `Leyendo ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)…`, true);
+
+  try {
+    const sql = await file.text();
+    mostrarMsg('import-msg', 'Enviando al servidor…', true);
+
+    const r = await fetch('/api/admin/importar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sql }),
+    });
+    if (r.status === 401) { location.href = '/login'; return; }
+    const d = await r.json();
+    if (d.ok) {
+      mostrarMsg('import-msg', `Importación completada correctamente.`, true);
+      input.value = '';
+    } else {
+      mostrarMsg('import-msg', d.mensaje || 'Error al importar', false);
+    }
+  } catch (err) {
+    mostrarMsg('import-msg', 'Error: ' + err.message, false);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Importar';
+  }
+}
 
 cargarUsuarios();
 </script>
