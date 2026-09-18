@@ -31,7 +31,8 @@ async function consultarExistencias(params = {}) {
 
   let sql = `
     SELECT e.cve_prod, e.cse_prod, e.lugar, e.existencia, e.fech_umod,
-           p.nom_prod, p.desc_prod, p.uni_med, p.pzas, p.capacidad
+           p.nom_prod, p.desc_prod, p.uni_med, p.pzas, p.capacidad,
+           COALESCE(p.desc_prod, p.nom_prod) AS descripcion
     FROM existencias e
     LEFT JOIN productos p ON UPPER(e.cve_prod) = UPPER(p.cve_prod)
     WHERE 1=1`;
