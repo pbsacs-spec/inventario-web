@@ -189,12 +189,7 @@ function generarPdfBuffer(pdfData, numero, cliente) {
     const ss    = fmtMX('second');
     const fecha = `${dd}/${mm}/${yyyy}`;
     const hora  = `${hh}:${mn}:${ss}`;
-    const nd    = String(numero || '').replace(/\D/g, '');
-    const numGuiones = nd.length === 12
-      ? `${nd.slice(0,2)}-${nd.slice(2,3)}-${nd.slice(3,7)}-${nd.slice(7)}`
-      : nd.length === 10
-        ? `${nd.slice(0,3)}-${nd.slice(3,6)}-${nd.slice(6)}`
-        : nd.replace(/(\d{4})(?=\d)/g, '$1-') || (numero || '');
+    const usuario = String(numero || cliente || '');
     const quarter = PAGE_W / 4;
 
     for (let i = 0; i < total; i++) {
@@ -205,14 +200,12 @@ function generarPdfBuffer(pdfData, numero, cliente) {
       doc.font('Helvetica-Bold').fontSize(9);
       doc.text('Fecha de Creación',   MARGIN,               labelY, { width: quarter, align: 'left',   lineBreak: false });
       doc.text('Hora de Creación',    MARGIN + quarter,     labelY, { width: quarter, align: 'left',   lineBreak: false });
-      const clienteLabel = cliente ? 'Cliente' : 'Número Solicitado';
-      const clienteValor = cliente ? String(cliente) : numGuiones;
-      doc.text(clienteLabel,          MARGIN + quarter * 2, labelY, { width: quarter, align: 'center', lineBreak: false });
+      doc.text('Solicitado por',      MARGIN + quarter * 2, labelY, { width: quarter, align: 'center', lineBreak: false });
       doc.text('Página',              MARGIN + quarter * 3, labelY, { width: quarter, align: 'right',  lineBreak: false });
       doc.font('Helvetica').fontSize(10);
       doc.text(fecha,                 MARGIN,               valueY, { width: quarter, align: 'left',   lineBreak: false });
       doc.text(hora,                  MARGIN + quarter,     valueY, { width: quarter, align: 'left',   lineBreak: false });
-      doc.text(clienteValor,          MARGIN + quarter * 2, valueY, { width: quarter, align: 'center', lineBreak: false });
+      doc.text(usuario,               MARGIN + quarter * 2, valueY, { width: quarter, align: 'center', lineBreak: false });
       doc.text(`${i + 1} / ${total}`, MARGIN + quarter * 3, valueY, { width: quarter, align: 'right',  lineBreak: false });
     }
 

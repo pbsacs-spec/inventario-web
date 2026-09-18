@@ -160,7 +160,7 @@ app.get('/api/pdf', requireAuth, async (req, res) => {
       return res.status(400).send('La consulta no generó datos exportables');
 
     registrarConsulta(req.session.userId, req.session.usuario, qLimpio, 'pdf', req.ip).catch(() => {});
-    const buf = await generarPdfBuffer(resultado.rawData || resultado.contenido, 'WEB', '');
+    const buf = await generarPdfBuffer(resultado.rawData || resultado.contenido, req.session.nombre || req.session.usuario, '');
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="resultados.pdf"');
     res.send(buf);
