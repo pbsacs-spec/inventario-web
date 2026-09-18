@@ -180,12 +180,13 @@ function generarPdfBuffer(pdfData, numero, cliente) {
     // ── Footer en cada página ────────────────────────────────────────────────
     const total = doc.bufferedPageRange().count;
     const now   = new Date();
-    const dd    = String(now.getDate()).padStart(2, '0');
-    const mm    = String(now.getMonth() + 1).padStart(2, '0');
-    const yyyy  = now.getFullYear();
-    const hh    = String(now.getHours()).padStart(2, '0');
-    const mn    = String(now.getMinutes()).padStart(2, '0');
-    const ss    = String(now.getSeconds()).padStart(2, '0');
+    const fmtMX = part => new Intl.DateTimeFormat('es-MX', { timeZone: 'America/Mexico_City', [part]: '2-digit' }).format(now);
+    const dd    = fmtMX('day');
+    const mm    = fmtMX('month');
+    const yyyy  = new Intl.DateTimeFormat('es-MX', { timeZone: 'America/Mexico_City', year: 'numeric' }).format(now);
+    const hh    = fmtMX('hour');
+    const mn    = fmtMX('minute');
+    const ss    = fmtMX('second');
     const fecha = `${dd}/${mm}/${yyyy}`;
     const hora  = `${hh}:${mn}:${ss}`;
     const nd    = String(numero || '').replace(/\D/g, '');
