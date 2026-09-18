@@ -25,7 +25,7 @@ app.post('/api/consulta', (req, res) => {
   const qLimpio = limpiarQuery(q);
 
   try {
-    const resultado = procesarMensaje(qLimpio + ' pdf');
+    const resultado = await procesarMensaje(qLimpio + ' pdf');
 
     if (resultado && typeof resultado === 'object') {
       if (resultado.tipo === 'pdf' && resultado.rawData && Array.isArray(resultado.rawData.columnas)) {
@@ -62,7 +62,7 @@ app.get('/api/pdf', async (req, res) => {
   const qLimpio = limpiarQuery(q);
 
   try {
-    const resultado = procesarMensaje(qLimpio + ' pdf');
+    const resultado = await procesarMensaje(qLimpio + ' pdf');
 
     if (!resultado || typeof resultado !== 'object' || resultado.tipo !== 'pdf') {
       return res.status(400).send('La consulta no generó datos exportables');
@@ -85,7 +85,7 @@ app.get('/api/txt', (req, res) => {
   const qLimpio = limpiarQuery(q);
 
   try {
-    const resultado = procesarMensaje(qLimpio + ' txt');
+    const resultado = await procesarMensaje(qLimpio + ' txt');
 
     if (resultado && typeof resultado === 'object' && resultado.tipo === 'txt') {
       res.setHeader('Content-Type', 'text/plain; charset=utf-8');

@@ -39,7 +39,6 @@ function limpiarTermino(texto) {
     .trim();
 }
 
-
 // ── Helpers de tabla ─────────────────────────────────────────────────────────
 
 function col(str, len) {
@@ -103,40 +102,36 @@ function formatearExistencias(resultados, rawData = false) {
   const filasDatos = [];
   for (const [cve, { desc, filas }] of Object.entries(porProducto)) {
     for (const f of filas) {
-      let metros = fmtNum(f.existencia);
-        filasDatos.push({ cve, desc, metros });
+      filasDatos.push({ cve, desc, metros: fmtNum(f.existencia) });
     }
   }
 
   if (rawData) {
     return {
-      columnas: ['CÓDIGO', 'DESCRIPCIÓN', 'METROS'],
+      columnas:   ['CÓDIGO', 'DESCRIPCIÓN', 'METROS'],
       alineacion: ['left', 'left', 'right'],
-      filas: filasDatos.map(f => [f.cve, f.desc, f.metros]),
-      totalRow: ['', 'TOTAL', totalStr],
+      filas:      filasDatos.map(f => [f.cve, f.desc, f.metros]),
+      totalRow:   ['', 'TOTAL', totalStr],
     };
   }
 
   const mw = Math.max(6, totalStr.length, ...filasDatos.map(f => f.metros.length));
   const lineas = [col('CÓDIGO', 12) + ' ' + col('DESCRIPCIÓN', dw) + ' ' + 'METROS'.padStart(mw)];
   lineas.push('─'.repeat(12 + 1 + dw + 1 + mw));
-
   for (const { cve, desc, metros } of filasDatos) {
     lineas.push(col(cve, 12) + ' ' + col(desc, dw) + ' ' + metros.padStart(mw));
   }
-
   lineas.push('─'.repeat(12 + 1 + dw + 1 + mw));
   lineas.push(col('', 12) + ' ' + col('TOTAL', dw) + ' ' + totalStr.padStart(mw));
-
   return tabla(lineas);
 }
 
 function formatearResumen(categorias, rawData = false) {
   if (!categorias.length) return '⚠️ No hay datos.';
 
-  const tienePiezas = categorias.some(c => c.total_piezas > 0);
-  const totalMetros = categorias.reduce((sum, c) => sum + (c.total_existencia || 0), 0);
-  const totalPiezas = tienePiezas ? categorias.reduce((sum, c) => sum + (c.total_piezas || 0), 0) : 0;
+  const tienePiezas   = categorias.some(c => c.total_piezas > 0);
+  const totalMetros   = categorias.reduce((sum, c) => sum + (c.total_existencia || 0), 0);
+  const totalPiezas   = tienePiezas ? categorias.reduce((sum, c) => sum + (c.total_piezas || 0), 0) : 0;
   const totalMetrosStr = fmtNum(totalMetros);
 
   const cw = Math.max(5, ...categorias.map(c => (c.cse_prod || '').length));
@@ -164,131 +159,104 @@ function formatearResumen(categorias, rawData = false) {
   header += ' ' + 'PRODS'.padStart(nw);
 
   const lineas = [header, '─'.repeat(header.length)];
-
   for (const c of categorias) {
     let linea = col(c.cse_prod, cw) + ' ' + fmtNum(c.total_existencia).padStart(mw);
     if (tienePiezas) linea += ' ' + String(c.total_piezas).padStart(pw);
     linea += ' ' + String(c.num_productos).padStart(nw);
     lineas.push(linea);
   }
-
   let totalLinea = col('TOTAL', cw) + ' ' + totalMetrosStr.padStart(mw);
   if (tienePiezas) totalLinea += ' ' + String(totalPiezas).padStart(pw);
   totalLinea += ' ' + ''.padStart(nw);
   lineas.push('─'.repeat(header.length));
   lineas.push(totalLinea);
-
   return tabla(lineas);
 }
 
-function formatearComparacionProductos(params, lugares, rawData = false) {
+async function formatearComparacionProductos(params, lugares, rawData = false) {
   const porProducto = {};
   for (const lugar of lugares) {
-    const rows = consultarExistencias({ ...params, lugar });
+    const rows = await consultarExistencias({ ...params, lugar });
     for (const r of rows) {
       if (!porProducto[r.cve_prod]) {
         porProducto[r.cve_prod] = { desc: r.descripcion, almacenes: {} };
       }
-      porProducto[r.cve_prod].almacenes[lugar] = { existencia: r.existencia, unidad: r.unidad_medida, piezas: r.piezas_a_surtir };
+      porProducto[r.cve_prod].almacenes[lugar] = { existencia: r.existencia };
     }
   }
 
   if (!Object.keys(porProducto).length) return '⚠️ No se encontraron existencias.';
 
-  const abrev = l => l === 'GENERAL' ? 'GENERAL' : l === 'CONSIG' ? 'CONSIG' : l === 'SEG MANO' ? 'SEG MANO' : l;
-  const dw = Math.max(11, ...Object.values(porProducto).map(({ desc }) => (desc || '').length));
-
+  const abrev  = l => l;
+  const dw     = Math.max(11, ...Object.values(porProducto).map(({ desc }) => (desc || '').length));
   const totalesPorLugar = lugares.map(l =>
-    Object.values(porProducto).reduce((sum, { almacenes }) => {
-      const d = almacenes[l];
-      return sum + (d ? d.existencia : 0);
-    }, 0)
+    Object.values(porProducto).reduce((sum, { almacenes }) => sum + (almacenes[l] ? almacenes[l].existencia : 0), 0)
   );
   const totalStrs = totalesPorLugar.map(fmtNum);
-
   const filasDatos = Object.entries(porProducto).map(([cve, { desc, almacenes }]) => ({
     cve, desc,
-    vals: lugares.map(l => {
-      const d = almacenes[l];
-      return d ? fmtNum(d.existencia) : '0.0';
-    }),
+    vals: lugares.map(l => almacenes[l] ? fmtNum(almacenes[l].existencia) : '0.0'),
   }));
 
   if (rawData) {
     return {
-      columnas: ['CÓDIGO', 'DESCRIPCIÓN', ...lugares.map(abrev)],
+      columnas:   ['CÓDIGO', 'DESCRIPCIÓN', ...lugares.map(abrev)],
       alineacion: ['left', 'left', ...lugares.map(() => 'right')],
-      filas: filasDatos.map(f => [f.cve, f.desc, ...f.vals]),
-      totalRow: ['', 'TOTAL', ...totalStrs],
+      filas:      filasDatos.map(f => [f.cve, f.desc, ...f.vals]),
+      totalRow:   ['', 'TOTAL', ...totalStrs],
     };
   }
 
   const cws = lugares.map((l, i) => Math.max(abrev(l).length, totalStrs[i].length, ...filasDatos.map(f => f.vals[i].length)));
-
   const lineas = [col('CÓDIGO', 12) + ' ' + col('DESCRIPCIÓN', dw) + ' ' + lugares.map((l, i) => abrev(l).padStart(cws[i])).join(' ')];
   lineas.push('─'.repeat(12 + 1 + dw + 1 + cws.reduce((a, b) => a + b + 1, 0) - 1));
-
   for (const { cve, desc, vals } of filasDatos) {
     lineas.push(col(cve, 12) + ' ' + col(desc, dw) + ' ' + vals.map((v, i) => v.padStart(cws[i])).join(' '));
   }
-
   lineas.push('─'.repeat(12 + 1 + dw + 1 + cws.reduce((a, b) => a + b + 1, 0) - 1));
   lineas.push(col('', 12) + ' ' + col('TOTAL', dw) + ' ' + totalStrs.map((v, i) => v.padStart(cws[i])).join(' '));
-
   return tabla(lineas);
 }
 
-function formatearComparacion(lugares, soloPositivos, rawData = false) {
+async function formatearComparacion(lugares, soloPositivos, rawData = false) {
   const datos = {};
   for (const lugar of lugares) {
-    const rows = resumenPorCategoria({ lugar, solo_positivos: soloPositivos });
+    const rows = await resumenPorCategoria({ lugar, solo_positivos: soloPositivos });
     for (const r of rows) {
       if (!datos[r.cse_prod]) datos[r.cse_prod] = {};
       datos[r.cse_prod][lugar] = r.total_existencia;
     }
   }
 
-  // Ordenar por suma total descendente
   const categorias = Object.entries(datos)
     .map(([cse, vals]) => ({ cse, total: Object.values(vals).reduce((a, b) => a + b, 0), vals }))
     .sort((a, b) => b.total - a.total);
 
   if (!categorias.length) return '⚠️ No hay datos.';
 
-  const abrev = l => l === 'GENERAL' ? 'GENERAL' : l === 'CONSIG' ? 'CONSIG' : l === 'SEG MANO' ? 'SEG MANO' : l;
-
-  const totalesPorLugar = lugares.map(l =>
-    Object.values(datos).reduce((sum, vals) => sum + (vals[l] || 0), 0)
-  );
+  const abrev = l => l;
+  const totalesPorLugar = lugares.map(l => Object.values(datos).reduce((sum, vals) => sum + (vals[l] || 0), 0));
   const totalStrs = totalesPorLugar.map(fmtNum);
-
-  const filasDatos = categorias.map(({ cse, vals }) => ({
-    cse,
-    vals: lugares.map(l => fmtNum(vals[l] || 0)),
-  }));
+  const filasDatos = categorias.map(({ cse, vals }) => ({ cse, vals: lugares.map(l => fmtNum(vals[l] || 0)) }));
 
   if (rawData) {
     return {
-      columnas: ['CATEG', ...lugares.map(abrev)],
+      columnas:   ['CATEG', ...lugares.map(abrev)],
       alineacion: ['left', ...lugares.map(() => 'right')],
-      filas: filasDatos.map(f => [f.cse, ...f.vals]),
-      totalRow: ['TOTAL', ...totalStrs],
+      filas:      filasDatos.map(f => [f.cse, ...f.vals]),
+      totalRow:   ['TOTAL', ...totalStrs],
     };
   }
 
-  const cw = Math.max(5, ...filasDatos.map(f => f.cse.length));
+  const cw  = Math.max(5, ...filasDatos.map(f => f.cse.length));
   const cws = lugares.map((l, i) => Math.max(abrev(l).length, totalStrs[i].length, ...filasDatos.map(f => f.vals[i].length)));
-
   const header = col('CATEG', cw) + ' ' + lugares.map((l, i) => abrev(l).padStart(cws[i])).join(' ');
   const lineas = [header, '─'.repeat(header.length)];
-
   for (const { cse, vals } of filasDatos) {
     lineas.push(col(cse, cw) + ' ' + vals.map((v, i) => v.padStart(cws[i])).join(' '));
   }
-
   lineas.push('─'.repeat(header.length));
   lineas.push(col('TOTAL', cw) + ' ' + totalStrs.map((v, i) => v.padStart(cws[i])).join(' '));
-
   return tabla(lineas);
 }
 
@@ -301,7 +269,6 @@ function formatearAyuda() {
 👤 Cliente: _cliente metropolitana_ o _busca cliente 1_
 📊 Resumen: _resumen_
 📋 Categorías: _categorías_
-🔄 Reimportar desde DBF: _actualizar_
 💾 Exportar TXT: agrega _bajar_ o _txt_ a cualquier consulta
 📄 Exportar PDF: agrega _pdf_ a cualquier consulta
 
@@ -328,17 +295,13 @@ function formatearClientes(rows, comoPdfFlag) {
   const nw  = Math.max(6, ...filas.map(f => String(f[1]).length));
   const crw = Math.max(7, ...filas.map(f => String(f[2]).length));
   const dw  = Math.max(4, ...filas.map(f => String(f[3]).length));
-
   const sep = '─'.repeat(cw + nw + crw + dw + 6);
   const hdr = String('CVE').padStart(cw) + '  ' + 'NOMBRE'.padEnd(nw) + '  ' +
               'CRÉDITO'.padStart(crw) + '  ' + 'DÍAS'.padStart(dw);
-
   const lineas = [sep, hdr, sep];
   for (const f of filas) {
-    lineas.push(
-      String(f[0]).padStart(cw) + '  ' + String(f[1]).padEnd(nw) + '  ' +
-      String(f[2]).padStart(crw) + '  ' + String(f[3]).padStart(dw)
-    );
+    lineas.push(String(f[0]).padStart(cw) + '  ' + String(f[1]).padEnd(nw) + '  ' +
+                String(f[2]).padStart(crw) + '  ' + String(f[3]).padStart(dw));
   }
   lineas.push(sep, `Total: ${rows.length} clientes`);
   return tabla(lineas);
@@ -346,7 +309,7 @@ function formatearClientes(rows, comoPdfFlag) {
 
 // ── Procesador principal ─────────────────────────────────────────────────────
 
-function procesarMensaje(texto) {
+async function procesarMensaje(texto) {
   const t = norm(texto);
   const lugar = extraerLugar(t) || 'GENERAL';
   const soloPositivos = true;
@@ -362,31 +325,16 @@ function procesarMensaje(texto) {
     return comoArchivo ? comoTxt(r) : r;
   };
 
-  // Clientes: "cliente metropolitana" | "busca cliente 5" | "clientes"
+  // Clientes
   const cteMatch = texto.match(/\b(?:busca\s+)?cliente[s]?\s*(.*)/i);
   if (cteMatch !== null) {
-    const termRaw = cteMatch[1]
-      .replace(/\b(pdf|txt|bajar|descargar|exportar|archivo)\b/gi, '')
-      .trim();
+    const termRaw = cteMatch[1].replace(/\b(pdf|txt|bajar|descargar|exportar|archivo)\b/gi, '').trim();
     const esCve   = /^\d+$/.test(termRaw);
     try {
-      const rows = buscarClientes(esCve
-        ? { cve_cte: termRaw }
-        : { termino: termRaw || null });
+      const rows = await buscarClientes(esCve ? { cve_cte: termRaw } : { termino: termRaw || null });
       return formatearClientes(rows, comoPdfFlag);
     } catch (err) {
       return `❌ Error al buscar clientes: ${err.message}`;
-    }
-  }
-
-  // Reimportar desde DBF
-  if (/\bACTUALIZA(R|)?\b|\bRECARGA(R|)?\b|\bREFRESCA(R|)?\b/.test(t)) {
-    try {
-      limpiarCache();
-      const { productos, existencias, ms } = migrar();
-      return `✅ Datos reimportados desde DBF en ${ms} ms\n  • ${productos} productos\n  • ${existencias} existencias`;
-    } catch (err) {
-      return `❌ Error al reimportar: ${err.message}`;
     }
   }
 
@@ -398,7 +346,7 @@ function procesarMensaje(texto) {
   // Listar categorías
   const tieneCodigo4d = /\b\d{4}\b/.test(texto);
   if (/\bCATEGOR(IA|IAS)\b/.test(t) && !tieneCodigo4d && !/\bRESUMEN\b/.test(t)) {
-    const lista = listarCategorias();
+    const lista = await listarCategorias();
     return `*Categorías (${lista.length}):*\n${lista.join(', ')}`;
   }
 
@@ -406,38 +354,38 @@ function procesarMensaje(texto) {
   if (/\bRESUMEN\b|\bTOTALES?\b|\bAGRUPAD/.test(t)) {
     const lugares = extraerLugares(t);
     if (lugares.length >= 2) {
-      return ret(formatearComparacion(lugares, soloPositivos, comoPdfFlag));
+      return ret(await formatearComparacion(lugares, soloPositivos, comoPdfFlag));
     }
-    return ret(formatearResumen(resumenPorCategoria({ lugar, solo_positivos: soloPositivos }), comoPdfFlag));
+    return ret(formatearResumen(await resumenPorCategoria({ lugar, solo_positivos: soloPositivos }), comoPdfFlag));
   }
 
   // Código de producto: 4 dígitos + letras (ej: 0282LISBCO)
   const cveMatch = texto.match(/\b(\d{4}[A-Za-z][A-Za-z0-9]{2,})\b/);
   if (cveMatch) {
     const cve_prod = cveMatch[1].toUpperCase();
-    const lugares = extraerLugares(t);
+    const lugares  = extraerLugares(t);
     if (lugares.length >= 2) {
-      return ret(formatearComparacionProductos({ cve_prod, solo_positivos: soloPositivos }, lugares, comoPdfFlag));
+      return ret(await formatearComparacionProductos({ cve_prod, solo_positivos: soloPositivos }, lugares, comoPdfFlag));
     }
-    return ret(formatearExistencias(consultarExistencias({ cve_prod, lugar }), comoPdfFlag));
+    return ret(formatearExistencias(await consultarExistencias({ cve_prod, lugar }), comoPdfFlag));
   }
 
   // Búsqueda explícita
   const busqMatch = texto.match(/\b(?:busca|busco|buscar|busqueda|búsqueda)\s+(.+)/i);
   if (busqMatch) {
-    const termRaw = limpiarTermino(busqMatch[1]);
+    const termRaw      = limpiarTermino(busqMatch[1]);
     const catEnBusqueda = termRaw.match(/\b(\d{4})\b/);
-    const cse_en_busq = catEnBusqueda ? catEnBusqueda[1] : null;
-    const busqueda = termRaw.replace(/\s*\b\d{4}\b\s*/g, ' ').trim();
+    const cse_en_busq  = catEnBusqueda ? catEnBusqueda[1] : null;
+    const busqueda     = termRaw.replace(/\s*\b\d{4}\b\s*/g, ' ').trim();
     if (busqueda || cse_en_busq) {
       const params = { solo_positivos: soloPositivos };
-      if (busqueda) params.busqueda = busqueda;
+      if (busqueda)   params.busqueda  = busqueda;
       if (cse_en_busq) params.cse_prod = cse_en_busq;
       const lugares = extraerLugares(t);
       if (lugares.length >= 2) {
-        return ret(formatearComparacionProductos(params, lugares, comoPdfFlag));
+        return ret(await formatearComparacionProductos(params, lugares, comoPdfFlag));
       }
-      return ret(formatearExistencias(consultarExistencias({ ...params, lugar }), comoPdfFlag));
+      return ret(formatearExistencias(await consultarExistencias({ ...params, lugar }), comoPdfFlag));
     }
   }
 
@@ -445,25 +393,24 @@ function procesarMensaje(texto) {
   const catMatch = texto.match(/\b(\d{4})\b/);
   if (catMatch) {
     const cse_prod = catMatch[1];
-    const lugares = extraerLugares(t);
+    const lugares  = extraerLugares(t);
     if (lugares.length >= 2) {
-      return ret(formatearComparacionProductos({ cse_prod, solo_positivos: soloPositivos }, lugares, comoPdfFlag));
+      return ret(await formatearComparacionProductos({ cse_prod, solo_positivos: soloPositivos }, lugares, comoPdfFlag));
     }
-    return ret(formatearExistencias(consultarExistencias({ cse_prod, lugar, solo_positivos: soloPositivos }), comoPdfFlag));
+    return ret(formatearExistencias(await consultarExistencias({ cse_prod, lugar, solo_positivos: soloPositivos }), comoPdfFlag));
   }
 
-  // Búsqueda implícita: cualquier texto que no matcheó nada (mínimo 3 chars)
+  // Búsqueda implícita
   const limpio = texto.trim();
   if (limpio.length >= 3) {
     const termino = limpiarTermino(limpio);
     if (termino) {
       const lugares = extraerLugares(t);
       if (lugares.length >= 2) {
-        return ret(formatearComparacionProductos({ busqueda: termino, solo_positivos: soloPositivos }, lugares, comoPdfFlag));
-      } else {
-        const rows = consultarExistencias({ busqueda: termino, lugar, solo_positivos: soloPositivos });
-        return ret(formatearExistencias(rows, comoPdfFlag));
+        return ret(await formatearComparacionProductos({ busqueda: termino, solo_positivos: soloPositivos }, lugares, comoPdfFlag));
       }
+      const rows = await consultarExistencias({ busqueda: termino, lugar, solo_positivos: soloPositivos });
+      return ret(formatearExistencias(rows, comoPdfFlag));
     }
   }
 
