@@ -16,6 +16,12 @@ const {
   actualizarUsuario,
   importarSQL,
   buscarClientes,
+  listarConceptos,
+  crearConcepto,
+  toggleConcepto,
+  buscarProductosParaMovimiento,
+  registrarMovimiento,
+  listarMovimientos,
 } = require('./dbf-reader');
 
 const app  = express();
@@ -206,6 +212,86 @@ app.get('/api/txt', requireAuth, async (req, res) => {
     return res.send(limpio);
   } catch (err) {
     res.status(500).send('Error al generar TXT: ' + err.message);
+  }
+});
+
+// ── Ajustes de inventario ─────────────────────────────────────────────────────
+
+app.get('/ajustes', (req, res) => {
+  if (!req.session || !req.session.userId) return res.redirect('/login');
+  if (req.session.rol !== 'admin') return res.redirect('/');
+  res.sendFile(path.join(__dirname, 'public', 'ajustes.html'));
+});
+
+app.get('/api/ajustes/conceptos', requireAuth, async (req, res) => {
+  const soloActivos = req.query.all !== '1' || req.session.rol !== 'admin';
+  try {
+    const conceptos = await listarConceptos(soloActivos);
+    res.json({ ok: true, conceptos });
+  } catch (err) {
+    res.status(500).json({ ok: false, mensaje: err.message });
+  }
+});
+
+app.post('/api/ajustes/conceptos', requireAdmin, async (req, res) => {
+  const { nombre, tipo } = req.body;
+  if (!nombre || !['entrada', 'salida'].includes(tipo))
+    return res.status(400).json({ ok: false, mensaje: 'Nombre y tipo requeridos' });
+  try {
+    await crearConcepto(nombre.trim(), tipo);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, mensaje: err.message });
+  }
+});
+
+app.post('/api/ajustes/conceptos/:id/toggle', requireAdmin, async (req, res) => {
+  try {
+    await toggleConcepto(parseInt(req.params.id));
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, mensaje: err.message });
+  }
+});
+
+app.get('/api/ajustes/productos', requireAdmin, async (req, res) => {
+  const q = (req.query.q || '').trim();
+  try {
+    const productos = await buscarProductosParaMovimiento(q);
+    res.json({ ok: true, productos });
+  } catch (err) {
+    res.status(500).json({ ok: false, mensaje: err.message });
+  }
+});
+
+app.post('/api/ajustes/movimientos', requireAdmin, async (req, res) => {
+  const { tipo, concepto_id, concepto, cve_prod, lugar, cantidad, notas } = req.body;
+  if (!['entrada', 'salida'].includes(tipo) || !cve_prod || !lugar || !(cantidad > 0))
+    return res.status(400).json({ ok: false, mensaje: 'Datos incompletos o inválidos' });
+  try {
+    await registrarMovimiento({
+      tipo, concepto_id, concepto, cve_prod, lugar,
+      cantidad: parseFloat(cantidad), notas,
+      usuario_id: req.session.userId, usuario: req.session.usuario,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ ok: false, mensaje: err.message });
+  }
+});
+
+app.get('/api/ajustes/movimientos', requireAdmin, async (req, res) => {
+  const { tipo, cve_prod, fecha_desde, fecha_hasta } = req.query;
+  try {
+    const movimientos = await listarMovimientos({
+      tipo: tipo || undefined,
+      cve_prod: cve_prod || undefined,
+      fecha_desde: fecha_desde || undefined,
+      fecha_hasta: fecha_hasta || undefined,
+    });
+    res.json({ ok: true, movimientos });
+  } catch (err) {
+    res.status(500).json({ ok: false, mensaje: err.message });
   }
 });
 

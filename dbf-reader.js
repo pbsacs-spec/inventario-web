@@ -124,6 +124,38 @@ async function crearTablas() {
     ip         VARCHAR(45),
     fecha      DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
+  await query(`CREATE TABLE IF NOT EXISTS conceptos_movimiento (
+    id        INT AUTO_INCREMENT PRIMARY KEY,
+    nombre    VARCHAR(100) NOT NULL,
+    tipo      ENUM('entrada','salida') NOT NULL,
+    activo    TINYINT(1) DEFAULT 1,
+    creado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await query(`CREATE TABLE IF NOT EXISTS movimientos (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    tipo        ENUM('entrada','salida') NOT NULL,
+    concepto_id INT,
+    concepto    VARCHAR(100),
+    cve_prod    VARCHAR(50) NOT NULL,
+    lugar       VARCHAR(50) NOT NULL,
+    cantidad    DECIMAL(12,4) NOT NULL,
+    notas       TEXT,
+    usuario_id  INT,
+    usuario     VARCHAR(50),
+    fecha       DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+  const semCheck = await query('SELECT COUNT(*) AS n FROM conceptos_movimiento');
+  if (semCheck[0].n === 0) {
+    const semilla = [
+      ['Compra',                'entrada'], ['Devolución de cliente', 'entrada'],
+      ['Ajuste de entrada',     'entrada'], ['Traspaso entrada',      'entrada'],
+      ['Venta',                 'salida'],  ['Devolución a proveedor','salida'],
+      ['Merma',                 'salida'],  ['Ajuste de salida',      'salida'],
+      ['Traspaso salida',       'salida'],
+    ];
+    for (const [nombre, tipo] of semilla)
+      await query('INSERT INTO conceptos_movimiento (nombre, tipo) VALUES (?, ?)', [nombre, tipo]);
+  }
 }
 
 async function buscarUsuario(usuario) {
@@ -190,8 +222,97 @@ async function actualizarUsuario(id, campos) {
   await query(`UPDATE usuarios SET ${sets.join(', ')} WHERE id = ?`, vals);
 }
 
+// ── Conceptos de movimiento ───────────────────────────────────────────────────
+
+async function listarConceptos(soloActivos = true) {
+  const where = soloActivos ? 'WHERE activo = 1' : '';
+  return query(`SELECT id, nombre, tipo, activo FROM conceptos_movimiento ${where} ORDER BY tipo, nombre`);
+}
+
+async function crearConcepto(nombre, tipo) {
+  await query('INSERT INTO conceptos_movimiento (nombre, tipo) VALUES (?, ?)', [nombre, tipo]);
+}
+
+async function toggleConcepto(id) {
+  await query('UPDATE conceptos_movimiento SET activo = NOT activo WHERE id = ?', [id]);
+}
+
+// ── Movimientos de inventario ─────────────────────────────────────────────────
+
+async function buscarProductosParaMovimiento(termino) {
+  if (!termino || termino.length < 2) return [];
+  const like = '%' + termino.toUpperCase() + '%';
+  return query(
+    `SELECT e.cve_prod, e.cse_prod, e.lugar, e.existencia,
+            COALESCE(p.desc_prod, p.nom_prod) AS descripcion, p.uni_med
+     FROM existencias e
+     LEFT JOIN productos p ON UPPER(e.cve_prod) = UPPER(p.cve_prod)
+     WHERE UPPER(e.cve_prod) LIKE ? OR UPPER(p.desc_prod) LIKE ? OR UPPER(p.nom_prod) LIKE ?
+     ORDER BY e.cve_prod, e.lugar LIMIT 30`,
+    [like, like, like]
+  );
+}
+
+async function registrarMovimiento({ tipo, concepto_id, concepto, cve_prod, lugar, cantidad, notas, usuario_id, usuario }) {
+  const conn = await getPool().getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.execute(
+      `INSERT INTO movimientos (tipo, concepto_id, concepto, cve_prod, lugar, cantidad, notas, usuario_id, usuario)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [tipo, concepto_id || null, concepto || '', cve_prod.toUpperCase(), lugar.toUpperCase(),
+       cantidad, notas || '', usuario_id, usuario]
+    );
+    const delta = tipo === 'entrada' ? cantidad : -cantidad;
+    const [result] = await conn.execute(
+      `UPDATE existencias SET existencia = existencia + ?, fech_umod = NOW()
+       WHERE UPPER(cve_prod) = UPPER(?) AND UPPER(lugar) = UPPER(?)`,
+      [delta, cve_prod, lugar]
+    );
+    if (result.affectedRows === 0) {
+      if (tipo === 'entrada') {
+        const [prod] = await conn.execute(
+          'SELECT cse_prod FROM productos WHERE UPPER(cve_prod) = UPPER(?) LIMIT 1', [cve_prod]
+        );
+        const cse = prod[0] ? prod[0].cse_prod || '' : '';
+        await conn.execute(
+          `INSERT INTO existencias (cve_prod, cse_prod, lugar, existencia, fech_umod) VALUES (?, ?, ?, ?, NOW())`,
+          [cve_prod.toUpperCase(), cse, lugar.toUpperCase(), cantidad]
+        );
+      } else {
+        throw new Error(`No existe existencia de "${cve_prod}" en "${lugar}"`);
+      }
+    }
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+async function listarMovimientos({ tipo, cve_prod, fecha_desde, fecha_hasta } = {}) {
+  let sql = `
+    SELECT m.id, m.tipo, m.concepto, m.cve_prod, m.lugar, m.cantidad, m.notas,
+           m.usuario, m.fecha,
+           COALESCE(p.desc_prod, p.nom_prod) AS descripcion
+    FROM movimientos m
+    LEFT JOIN productos p ON UPPER(m.cve_prod) = UPPER(p.cve_prod)
+    WHERE 1=1`;
+  const args = [];
+  if (tipo)        { sql += ' AND m.tipo = ?';               args.push(tipo); }
+  if (cve_prod)    { sql += ' AND UPPER(m.cve_prod) LIKE ?'; args.push('%' + cve_prod.toUpperCase() + '%'); }
+  if (fecha_desde) { sql += ' AND DATE(m.fecha) >= ?';       args.push(fecha_desde); }
+  if (fecha_hasta) { sql += ' AND DATE(m.fecha) <= ?';       args.push(fecha_hasta); }
+  sql += ' ORDER BY m.fecha DESC LIMIT 300';
+  return query(sql, args);
+}
+
 module.exports = {
   consultarExistencias, resumenPorCategoria, listarCategorias, buscarClientes, limpiarCache,
   crearTablas, buscarUsuario, contarUsuarios, crearUsuario, registrarConsulta,
   listarUsuarios, toggleUsuario, actualizarUsuario, importarSQL,
+  listarConceptos, crearConcepto, toggleConcepto,
+  buscarProductosParaMovimiento, registrarMovimiento, listarMovimientos,
 };

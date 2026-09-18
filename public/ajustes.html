@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ajustes de Inventario</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #2c3e50; min-height: 100vh; }
+
+header { background: #1a2535; color: white; padding: 14px 28px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
+header .icon { font-size: 1.5rem; }
+header h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: 0.3px; flex: 1; }
+.header-links { display: flex; gap: 10px; }
+.btn-nav { padding: 5px 13px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: 5px; color: white; font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: background .14s; }
+.btn-nav:hover { background: rgba(255,255,255,0.22); }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 24px 20px; display: flex; flex-direction: column; gap: 20px; }
+
+.card { background: white; border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); overflow: hidden; }
+.card-header { padding: 13px 20px; background: #f6f8fa; border-bottom: 1px solid #e8ecf0; font-weight: 700; font-size: 0.95rem; color: #1a2535; }
+.card-body { padding: 20px; }
+
+/* Tipo toggle */
+.tipo-toggle { display: flex; border: 2px solid #dde3ec; border-radius: 8px; overflow: hidden; width: fit-content; margin-bottom: 18px; }
+.tipo-btn { padding: 9px 32px; background: #f8f9fb; color: #637083; font-size: 0.9rem; font-weight: 700; cursor: pointer; border: none; transition: all .15s; letter-spacing: 0.5px; }
+.tipo-btn:first-child { border-right: 1px solid #dde3ec; }
+.tipo-btn.act-entrada { background: #1a7a45; color: white; }
+.tipo-btn.act-salida  { background: #c0392b; color: white; }
+
+/* Campos */
+.form-row { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 14px; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 170px; }
+.field label { font-size: 0.82rem; font-weight: 600; color: #445; }
+input[type="text"], input[type="number"], input[type="date"], select {
+  padding: 9px 13px; border: 2px solid #dde3ec; border-radius: 7px;
+  font-size: 0.9rem; outline: none; background: #f8f9fb; font-family: inherit;
+}
+input:focus, select:focus { border-color: #3a85d8; background: white; }
+
+/* Autocomplete */
+.ac-wrap { position: relative; }
+.ac-dropdown {
+  position: absolute; top: 100%; left: 0; right: 0; background: white;
+  border: 2px solid #3a85d8; border-top: none; border-radius: 0 0 7px 7px;
+  max-height: 260px; overflow-y: auto; z-index: 50; display: none;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+}
+.ac-dropdown.visible { display: block; }
+.ac-item { padding: 9px 13px; cursor: pointer; border-bottom: 1px solid #f0f2f5; }
+.ac-item:last-child { border-bottom: none; }
+.ac-item:hover { background: #f4f7fd; }
+.ac-clave { font-weight: 700; color: #1a2535; font-size: 0.9rem; }
+.ac-desc  { color: #637083; font-size: 0.88rem; }
+.ac-meta  { font-size: 0.79rem; color: #a0aab8; margin-top: 2px; }
+.ac-msg   { padding: 10px 13px; font-size: 0.87rem; color: #a0aab8; }
+
+/* Producto seleccionado */
+.prod-info { background: #f0f7ff; border: 1.5px solid #b8d4f5; border-radius: 7px; padding: 10px 15px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.prod-info-text { flex: 1; font-size: 0.88rem; }
+.prod-info-text strong { color: #1a2535; }
+.prod-stock { font-size: 0.82rem; color: #637083; margin-top: 2px; }
+.btn-limpiar { padding: 4px 10px; background: none; border: 1px solid #b8d4f5; border-radius: 5px; color: #637083; cursor: pointer; font-size: 0.8rem; white-space: nowrap; }
+.btn-limpiar:hover { background: #ddeeff; }
+
+/* Botones */
+.btn-reg { padding: 10px 28px; border: none; border-radius: 7px; font-size: 0.93rem; font-weight: 700; cursor: pointer; transition: background .14s; }
+.btn-reg:disabled { opacity: .55; cursor: default; }
+.btn-reg.entrada { background: #1a7a45; color: white; }
+.btn-reg.entrada:hover:not(:disabled) { background: #166038; }
+.btn-reg.salida  { background: #c0392b; color: white; }
+.btn-reg.salida:hover:not(:disabled)  { background: #a5301f; }
+.btn-agregar { padding: 10px 22px; background: #1a2535; color: white; border: none; border-radius: 7px; font-size: 0.9rem; font-weight: 600; cursor: pointer; white-space: nowrap; align-self: flex-end; }
+.btn-agregar:hover { background: #253550; }
+.btn-agregar:disabled { background: #8a9ab0; cursor: default; }
+.btn-filtrar { padding: 9px 18px; background: #3a85d8; color: white; border: none; border-radius: 7px; font-size: 0.88rem; font-weight: 600; cursor: pointer; white-space: nowrap; align-self: flex-end; }
+.btn-filtrar:hover { background: #2d6db8; }
+
+/* Mensajes */
+.msg { padding: 10px 14px; border-radius: 6px; font-size: 0.87rem; font-weight: 500; }
+.msg-ok  { background: #edfaf3; color: #1a7a45; border: 1px solid #b2e8cc; }
+.msg-err { background: #fdf2f2; color: #c0392b; border: 1px solid #f5c6cb; }
+
+/* Filtros */
+.filtros { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px 20px; background: #f6f8fa; border-bottom: 1px solid #e8ecf0; align-items: flex-end; }
+.filtros .field { min-width: 120px; }
+
+/* Tabla */
+.table-wrap { overflow: auto; max-height: 52vh; }
+table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+thead th { position: sticky; top: 0; background: #1a2535; color: #cdd8e8; padding: 9px 14px; white-space: nowrap; font-weight: 600; font-size: 0.8rem; letter-spacing: 0.4px; text-transform: uppercase; z-index: 1; text-align: left; }
+tbody tr { border-bottom: 1px solid #f0f2f5; }
+tbody tr:hover { background: #f4f7fd; }
+tbody td { padding: 8px 14px; color: #2c3e50; }
+tbody tr:nth-child(even) { background: #fafbfc; }
+tbody tr:nth-child(even):hover { background: #f4f7fd; }
+.td-right { text-align: right; }
+.notas-td { max-width: 180px; white-space: normal; font-size: 0.82rem; color: #637083; }
+
+/* Badges */
+.badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600; }
+.badge-entrada  { background: #edfaf3; color: #1a7a45; }
+.badge-salida   { background: #fdf2f2; color: #c0392b; }
+.badge-activo   { background: #edfaf3; color: #1a7a45; }
+.badge-inactivo { background: #f5f5f5; color: #888; }
+.badge-tipo-e   { background: #e8f0fb; color: #2d6db8; }
+.badge-tipo-s   { background: #fff3e0; color: #c0710a; }
+.qty-e { color: #1a7a45; font-weight: 700; }
+.qty-s { color: #c0392b; font-weight: 700; }
+
+/* Acciones */
+.acciones { display: flex; gap: 6px; }
+.btn-accion { padding: 4px 11px; border-radius: 5px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border: none; transition: background .14s; }
+.btn-activar    { background: #edfaf3; color: #1a7a45; }
+.btn-activar:hover { background: #b2e8cc; }
+.btn-desactivar { background: #fdecea; color: #c0392b; }
+.btn-desactivar:hover { background: #f5c6c2; }
+
+/* Estados vacíos */
+.empty-cell, .loading-cell, .error-cell { text-align: center; padding: 36px; color: #a0aab8; font-size: 0.9rem; }
+.error-cell { color: #c0392b; }
+.spinner { display: inline-block; width: 18px; height: 18px; border: 3px solid #dde; border-top-color: #3a85d8; border-radius: 50%; animation: spin .75s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="icon">📋</span>
+  <h1>Ajustes de Inventario</h1>
+  <div class="header-links">
+    <a class="btn-nav" href="/">← Inventario</a>
+    <a class="btn-nav" href="/auth/logout">Salir</a>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ── Registrar movimiento ── -->
+  <div class="card">
+    <div class="card-header">Registrar movimiento</div>
+    <div class="card-body">
+
+      <div class="tipo-toggle">
+        <button class="tipo-btn act-entrada" id="btn-tipo-e" onclick="setTipo('entrada')">ENTRADA</button>
+        <button class="tipo-btn"             id="btn-tipo-s" onclick="setTipo('salida')">SALIDA</button>
+      </div>
+
+      <div class="form-row">
+        <div class="field" style="flex:0 0 auto; min-width:220px;">
+          <label>Concepto</label>
+          <select id="f-concepto">
+            <option value="">Selecciona un concepto…</option>
+          </select>
+        </div>
+        <div class="field ac-wrap" style="flex:2;">
+          <label>Producto</label>
+          <input type="text" id="prod-search" placeholder="Buscar por clave o descripción…" autocomplete="off" />
+          <div class="ac-dropdown" id="prod-dropdown"></div>
+        </div>
+      </div>
+
+      <div class="prod-info" id="prod-info" style="display:none">
+        <div class="prod-info-text">
+          <strong id="info-clave"></strong> — <span id="info-desc"></span>
+          <div class="prod-stock">Lugar: <strong id="info-lugar"></strong> &nbsp;|&nbsp; Stock actual: <strong id="info-stock"></strong></div>
+        </div>
+        <button class="btn-limpiar" onclick="limpiarProducto()">✕ Cambiar</button>
+      </div>
+
+      <div class="form-row">
+        <div class="field" style="flex:0 0 auto; min-width:160px;">
+          <label>Cantidad</label>
+          <input type="number" id="f-cantidad" min="0.0001" step="0.0001" placeholder="0" />
+        </div>
+        <div class="field">
+          <label>Notas <span style="font-weight:400;color:#a0aab8">(opcional)</span></label>
+          <input type="text" id="f-notas" placeholder="Observaciones…" autocomplete="off" />
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+        <button class="btn-reg entrada" id="btn-registrar" onclick="registrar()">Registrar entrada</button>
+        <div id="form-msg" style="display:none"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Historial ── -->
+  <div class="card">
+    <div class="card-header">Historial de movimientos</div>
+    <div class="filtros">
+      <div class="field">
+        <label>Tipo</label>
+        <select id="fil-tipo">
+          <option value="">Todos</option>
+          <option value="entrada">Entrada</option>
+          <option value="salida">Salida</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Desde</label>
+        <input type="date" id="fil-desde" />
+      </div>
+      <div class="field">
+        <label>Hasta</label>
+        <input type="date" id="fil-hasta" />
+      </div>
+      <button class="btn-filtrar" onclick="cargarHistorial()">Buscar</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Concepto</th>
+            <th>Producto</th>
+            <th>Lugar</th>
+            <th style="text-align:right">Cantidad</th>
+            <th>Notas</th>
+            <th>Usuario</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-historial">
+          <tr><td colspan="8" class="loading-cell"><span class="spinner"></span>Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Gestión de conceptos (admin) ── -->
+  <div class="card">
+    <div class="card-header">Gestión de conceptos</div>
+    <div class="card-body">
+      <div class="form-row">
+        <div class="field">
+          <label>Nombre del concepto</label>
+          <input type="text" id="nc-nombre" placeholder="Ej: Ajuste por diferencia" autocomplete="off" />
+        </div>
+        <div class="field" style="flex:0 0 auto; min-width:160px;">
+          <label>Tipo</label>
+          <select id="nc-tipo">
+            <option value="entrada">Entrada</option>
+            <option value="salida">Salida</option>
+          </select>
+        </div>
+        <button class="btn-agregar" id="btn-agregar" onclick="crearConcepto()">Agregar</button>
+      </div>
+      <div id="conceptos-msg" style="display:none; margin-top:10px;"></div>
+    </div>
+    <div class="table-wrap" style="max-height:none;">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Tipo</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tabla-conceptos">
+          <tr><td colspan="4" class="loading-cell"><span class="spinner"></span>Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+let tipoActual    = 'entrada';
+let conceptos     = { entrada: [], salida: [] };
+let productoActual = null;
+let productosCache = [];
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async () => {
+  const r = await fetch('/api/me');
+  if (r.status === 401) { location.href = '/login'; return; }
+  await cargarConceptos();
+  cargarHistorial();
+  cargarConceptosMgmt();
+})();
+
+// ── Tipo ──────────────────────────────────────────────────────────────────────
+function setTipo(t) {
+  tipoActual = t;
+  document.getElementById('btn-tipo-e').className = 'tipo-btn' + (t === 'entrada' ? ' act-entrada' : '');
+  document.getElementById('btn-tipo-s').className = 'tipo-btn' + (t === 'salida'  ? ' act-salida'  : '');
+  const btn = document.getElementById('btn-registrar');
+  btn.className   = 'btn-reg ' + t;
+  btn.textContent = t === 'entrada' ? 'Registrar entrada' : 'Registrar salida';
+  actualizarSelectConceptos();
+  limpiarProducto();
+  ocultarMsg('form-msg');
+}
+
+// ── Conceptos ─────────────────────────────────────────────────────────────────
+async function cargarConceptos() {
+  try {
+    const r  = await fetch('/api/ajustes/conceptos');
+    const d  = await r.json();
+    if (!d.ok) return;
+    conceptos.entrada = d.conceptos.filter(c => c.tipo === 'entrada');
+    conceptos.salida  = d.conceptos.filter(c => c.tipo === 'salida');
+    actualizarSelectConceptos();
+  } catch (_) {}
+}
+
+function actualizarSelectConceptos() {
+  const sel = document.getElementById('f-concepto');
+  sel.innerHTML = '<option value="">Selecciona un concepto…</option>' +
+    conceptos[tipoActual].map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+}
+
+// ── Autocomplete producto ─────────────────────────────────────────────────────
+let debProd = null;
+
+document.getElementById('prod-search').addEventListener('input', () => {
+  clearTimeout(debProd);
+  debProd = setTimeout(buscarProductos, 300);
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.ac-wrap'))
+    document.getElementById('prod-dropdown').classList.remove('visible');
+});
+
+async function buscarProductos() {
+  const q  = document.getElementById('prod-search').value.trim();
+  const dd = document.getElementById('prod-dropdown');
+  if (q.length < 2) { dd.classList.remove('visible'); return; }
+
+  dd.innerHTML = '<div class="ac-msg"><span class="spinner"></span>Buscando…</div>';
+  dd.classList.add('visible');
+
+  try {
+    const r = await fetch('/api/ajustes/productos?q=' + encodeURIComponent(q));
+    if (r.status === 401) { location.href = '/login'; return; }
+    const d = await r.json();
+    if (!d.ok || !d.productos.length) {
+      dd.innerHTML = '<div class="ac-msg">Sin resultados</div>';
+      return;
+    }
+    productosCache = d.productos;
+    dd.innerHTML = productosCache.map((p, i) => `
+      <div class="ac-item" onclick="seleccionarProducto(${i})">
+        <span class="ac-clave">${esc(p.cve_prod)}</span>
+        <span class="ac-desc"> — ${esc(p.descripcion || '')}</span>
+        <div class="ac-meta">Lugar: <strong>${esc(p.lugar)}</strong> &nbsp;|&nbsp; Stock: <strong>${fmtNum(p.existencia)}</strong> ${esc(p.uni_med || '')}</div>
+      </div>`).join('');
+  } catch (_) {
+    dd.classList.remove('visible');
+  }
+}
+
+function seleccionarProducto(i) {
+  const p = productosCache[i];
+  productoActual = p;
+  document.getElementById('prod-search').value         = `${p.cve_prod} — ${p.descripcion || ''}`;
+  document.getElementById('prod-dropdown').classList.remove('visible');
+  document.getElementById('info-clave').textContent    = p.cve_prod;
+  document.getElementById('info-desc').textContent     = p.descripcion || '—';
+  document.getElementById('info-lugar').textContent    = p.lugar;
+  document.getElementById('info-stock').textContent    = `${fmtNum(p.existencia)} ${p.uni_med || ''}`.trim();
+  document.getElementById('prod-info').style.display   = 'flex';
+  document.getElementById('f-cantidad').focus();
+}
+
+function limpiarProducto() {
+  productoActual = null;
+  document.getElementById('prod-search').value        = '';
+  document.getElementById('prod-info').style.display  = 'none';
+  document.getElementById('prod-dropdown').classList.remove('visible');
+}
+
+// ── Registrar ─────────────────────────────────────────────────────────────────
+async function registrar() {
+  const conceptoId = document.getElementById('f-concepto').value;
+  const cantidad   = parseFloat(document.getElementById('f-cantidad').value);
+  const notas      = document.getElementById('f-notas').value.trim();
+  const btn        = document.getElementById('btn-registrar');
+
+  if (!conceptoId)         { mostrarMsg('form-msg', 'Selecciona un concepto',        false); return; }
+  if (!productoActual)     { mostrarMsg('form-msg', 'Selecciona un producto',         false); return; }
+  if (!(cantidad > 0))     { mostrarMsg('form-msg', 'Ingresa una cantidad válida',    false); return; }
+
+  btn.disabled = true;
+  const txtOrig = btn.textContent;
+  btn.textContent = 'Guardando…';
+  ocultarMsg('form-msg');
+
+  try {
+    const concepto = conceptos[tipoActual].find(c => String(c.id) === conceptoId);
+    const r = await fetch('/api/ajustes/movimientos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tipo: tipoActual,
+        concepto_id: parseInt(conceptoId),
+        concepto: concepto ? concepto.nombre : '',
+        cve_prod: productoActual.cve_prod,
+        lugar: productoActual.lugar,
+        cantidad,
+        notas,
+      }),
+    });
+    if (r.status === 401) { location.href = '/login'; return; }
+    const d = await r.json();
+    if (d.ok) {
+      const signo = tipoActual === 'entrada' ? '+' : '−';
+      mostrarMsg('form-msg',
+        `${signo}${fmtNum(cantidad)} registrado en ${productoActual.cve_prod} (${productoActual.lugar})`, true);
+      limpiarProducto();
+      document.getElementById('f-cantidad').value = '';
+      document.getElementById('f-notas').value    = '';
+      cargarHistorial();
+    } else {
+      mostrarMsg('form-msg', d.mensaje || 'Error al registrar', false);
+    }
+  } catch (_) {
+    mostrarMsg('form-msg', 'Error de conexión', false);
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = txtOrig;
+  }
+}
+
+// ── Historial ─────────────────────────────────────────────────────────────────
+async function cargarHistorial() {
+  const tbody = document.getElementById('tabla-historial');
+  tbody.innerHTML = '<tr><td colspan="8" class="loading-cell"><span class="spinner"></span>Cargando…</td></tr>';
+
+  const p = new URLSearchParams();
+  const tipo  = document.getElementById('fil-tipo').value;
+  const desde = document.getElementById('fil-desde').value;
+  const hasta = document.getElementById('fil-hasta').value;
+  if (tipo)  p.set('tipo', tipo);
+  if (desde) p.set('fecha_desde', desde);
+  if (hasta) p.set('fecha_hasta', hasta);
+
+  try {
+    const r = await fetch('/api/ajustes/movimientos?' + p);
+    if (r.status === 401) { location.href = '/login'; return; }
+    const d = await r.json();
+    if (!d.ok) { tbody.innerHTML = `<tr><td colspan="8" class="error-cell">${esc(d.mensaje)}</td></tr>`; return; }
+    if (!d.movimientos.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">Sin movimientos registrados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = d.movimientos.map(m => `
+      <tr>
+        <td style="white-space:nowrap">${fmtFecha(m.fecha)}</td>
+        <td><span class="badge badge-${m.tipo}">${m.tipo}</span></td>
+        <td>${esc(m.concepto || '—')}</td>
+        <td>
+          <strong>${esc(m.cve_prod)}</strong>
+          ${m.descripcion ? `<div style="font-size:.79rem;color:#637083;">${esc(m.descripcion)}</div>` : ''}
+        </td>
+        <td>${esc(m.lugar)}</td>
+        <td class="td-right qty-${m.tipo === 'entrada' ? 'e' : 's'}">
+          ${m.tipo === 'entrada' ? '+' : '−'}${fmtNum(m.cantidad)}
+        </td>
+        <td class="notas-td">${esc(m.notas || '—')}</td>
+        <td>${esc(m.usuario || '—')}</td>
+      </tr>`).join('');
+  } catch (_) {
+    tbody.innerHTML = '<tr><td colspan="8" class="error-cell">Error de conexión</td></tr>';
+  }
+}
+
+// ── Gestión de conceptos ──────────────────────────────────────────────────────
+async function cargarConceptosMgmt() {
+  const tbody = document.getElementById('tabla-conceptos');
+  try {
+    const r = await fetch('/api/ajustes/conceptos?all=1');
+    const d = await r.json();
+    if (!d.ok || !d.conceptos.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">Sin conceptos registrados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = d.conceptos.map(c => `
+      <tr id="crow-${c.id}">
+        <td>${esc(c.nombre)}</td>
+        <td><span class="badge ${c.tipo === 'entrada' ? 'badge-tipo-e' : 'badge-tipo-s'}">${c.tipo}</span></td>
+        <td><span class="badge ${c.activo ? 'badge-activo' : 'badge-inactivo'}">${c.activo ? 'Activo' : 'Inactivo'}</span></td>
+        <td>
+          <div class="acciones">
+            <button class="btn-accion ${c.activo ? 'btn-desactivar' : 'btn-activar'}"
+                    onclick="toggleConcepto(${c.id})">
+              ${c.activo ? 'Desactivar' : 'Activar'}
+            </button>
+          </div>
+        </td>
+      </tr>`).join('');
+  } catch (_) {}
+}
+
+async function crearConcepto() {
+  const nombre = document.getElementById('nc-nombre').value.trim();
+  const tipo   = document.getElementById('nc-tipo').value;
+  const btn    = document.getElementById('btn-agregar');
+  if (!nombre) { mostrarMsg('conceptos-msg', 'Escribe un nombre para el concepto', false); return; }
+
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    const r = await fetch('/api/ajustes/conceptos', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre, tipo }),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      mostrarMsg('conceptos-msg', `Concepto "${nombre}" creado`, true);
+      document.getElementById('nc-nombre').value = '';
+      cargarConceptosMgmt();
+      cargarConceptos();
+    } else {
+      mostrarMsg('conceptos-msg', d.mensaje || 'Error', false);
+    }
+  } catch (_) {
+    mostrarMsg('conceptos-msg', 'Error de conexión', false);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Agregar';
+  }
+}
+
+async function toggleConcepto(id) {
+  const fila = document.getElementById('crow-' + id);
+  fila.querySelectorAll('button').forEach(b => b.disabled = true);
+  try {
+    const r = await fetch(`/api/ajustes/conceptos/${id}/toggle`, { method: 'POST' });
+    const d = await r.json();
+    if (d.ok) { cargarConceptosMgmt(); cargarConceptos(); }
+    else { fila.querySelectorAll('button').forEach(b => b.disabled = false); }
+  } catch (_) {
+    fila.querySelectorAll('button').forEach(b => b.disabled = false);
+  }
+}
+
+// ── Utilidades ────────────────────────────────────────────────────────────────
+function mostrarMsg(id, texto, ok) {
+  const div = document.getElementById(id);
+  div.className    = 'msg ' + (ok ? 'msg-ok' : 'msg-err');
+  div.textContent  = texto;
+  div.style.display = 'block';
+  if (ok) setTimeout(() => { div.style.display = 'none'; }, 5000);
+}
+
+function ocultarMsg(id) {
+  document.getElementById(id).style.display = 'none';
+}
+
+function fmtFecha(f) {
+  if (!f) return '—';
+  return new Date(f).toLocaleString('es-MX', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function fmtNum(n) {
+  const v = parseFloat(n);
+  if (isNaN(v)) return '0';
+  return v % 1 === 0
+    ? v.toLocaleString('es-MX')
+    : v.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
