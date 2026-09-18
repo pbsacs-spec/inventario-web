@@ -49,6 +49,7 @@ app.post('/auth/login', async (req, res) => {
     req.session.userId  = user.id;
     req.session.usuario = user.usuario;
     req.session.nombre  = user.nombre || user.usuario;
+    req.session.rol     = user.rol || 'admin';
     res.redirect('/');
   } catch (_) {
     res.redirect('/login?err=1');
@@ -94,7 +95,7 @@ app.get('/', (req, res) => {
 
 app.get('/api/me', (req, res) => {
   if (!req.session || !req.session.userId) return res.status(401).json({ ok: false });
-  res.json({ ok: true, usuario: req.session.usuario, nombre: req.session.nombre });
+  res.json({ ok: true, usuario: req.session.usuario, nombre: req.session.nombre, rol: req.session.rol });
 });
 
 // ── Middleware de auth ────────────────────────────────────────────────────────
@@ -102,6 +103,13 @@ app.get('/api/me', (req, res) => {
 function requireAuth(req, res, next) {
   if (req.session && req.session.userId) return next();
   res.status(401).json({ tipo: 'error', mensaje: 'Sesión expirada. Recarga la página.' });
+}
+
+function requireAdmin(req, res, next) {
+  if (req.session && req.session.userId && req.session.rol === 'admin') return next();
+  if (!req.session || !req.session.userId)
+    return res.status(401).json({ tipo: 'error', mensaje: 'Sesión expirada. Recarga la página.' });
+  res.status(403).json({ tipo: 'error', mensaje: 'No tienes permiso para esta acción.' });
 }
 
 function limpiarQuery(q) {
@@ -204,10 +212,11 @@ app.get('/api/txt', requireAuth, async (req, res) => {
 
 app.get('/admin', (req, res) => {
   if (!req.session || !req.session.userId) return res.redirect('/login');
+  if (req.session.rol !== 'admin') return res.redirect('/');
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
-app.get('/api/admin/usuarios', requireAuth, async (req, res) => {
+app.get('/api/admin/usuarios', requireAdmin, async (req, res) => {
   try {
     const usuarios = await listarUsuarios();
     res.json({ ok: true, usuarios });
@@ -216,23 +225,24 @@ app.get('/api/admin/usuarios', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/admin/usuarios', requireAuth, async (req, res) => {
-  const { usuario, password, nombre } = req.body;
+app.post('/api/admin/usuarios', requireAdmin, async (req, res) => {
+  const { usuario, password, nombre, rol } = req.body;
   if (!usuario || !password) return res.status(400).json({ ok: false, mensaje: 'Usuario y contraseña requeridos' });
+  const rolFinal = (rol === 'consulta') ? 'consulta' : 'admin';
   try {
     const existe = await buscarUsuario(usuario);
     if (existe) return res.status(409).json({ ok: false, mensaje: 'El usuario ya existe' });
     const hash = await bcrypt.hash(password, 10);
-    await crearUsuario(usuario, hash, nombre || usuario);
+    await crearUsuario(usuario, hash, nombre || usuario, rolFinal);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, mensaje: err.message });
   }
 });
 
-app.put('/api/admin/usuarios/:id', requireAuth, async (req, res) => {
+app.put('/api/admin/usuarios/:id', requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id);
-  const { nombre, usuario, password } = req.body;
+  const { nombre, usuario, password, rol } = req.body;
   try {
     if (usuario) {
       const existe = await buscarUsuario(usuario);
@@ -241,6 +251,7 @@ app.put('/api/admin/usuarios/:id', requireAuth, async (req, res) => {
     const campos = {};
     if (nombre   !== undefined) campos.nombre  = nombre;
     if (usuario  !== undefined) campos.usuario = usuario;
+    if (rol      !== undefined) campos.rol     = (rol === 'consulta') ? 'consulta' : 'admin';
     if (password) {
       if (password.length < 6) return res.status(400).json({ ok: false, mensaje: 'La contraseña debe tener al menos 6 caracteres' });
       campos.password_hash = await bcrypt.hash(password, 10);
@@ -252,7 +263,7 @@ app.put('/api/admin/usuarios/:id', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/admin/usuarios/:id/toggle', requireAuth, async (req, res) => {
+app.post('/api/admin/usuarios/:id/toggle', requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id);
   if (id === req.session.userId) return res.status(400).json({ ok: false, mensaje: 'No puedes desactivar tu propia cuenta' });
   try {
@@ -265,7 +276,7 @@ app.post('/api/admin/usuarios/:id/toggle', requireAuth, async (req, res) => {
 
 // ── Admin: importar SQL ───────────────────────────────────────────────────────
 
-app.post('/api/admin/importar', requireAuth, async (req, res) => {
+app.post('/api/admin/importar', requireAdmin, async (req, res) => {
   const { sql } = req.body;
   if (!sql || typeof sql !== 'string') return res.status(400).json({ ok: false, mensaje: 'No se recibió contenido SQL' });
 

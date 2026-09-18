@@ -61,8 +61,13 @@ tbody tr:hover { background: #f9fafb; }
 tbody td { padding: 10px 16px; }
 
 .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: 600; }
-.badge-activo   { background: #edfaf3; color: #1a7a45; }
-.badge-inactivo { background: #f5f5f5; color: #888; }
+.badge-activo    { background: #edfaf3; color: #1a7a45; }
+.badge-inactivo  { background: #f5f5f5; color: #888; }
+.badge-admin     { background: #e8f0fb; color: #2d6db8; }
+.badge-consulta  { background: #fff3e0; color: #c0710a; }
+
+select { padding: 9px 13px; border: 2px solid #dde3ec; border-radius: 7px; font-size: 0.9rem; outline: none; background: #f8f9fb; }
+select:focus { border-color: #3a85d8; background: white; }
 
 .acciones { display: flex; gap: 6px; }
 .btn-accion { padding: 5px 12px; border-radius: 5px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: none; transition: background .14s; white-space: nowrap; }
@@ -147,6 +152,13 @@ tbody td { padding: 10px 16px; }
         <label>Contraseña</label>
         <input type="password" id="f-password" placeholder="Mínimo 6 caracteres" />
       </div>
+      <div class="field" style="flex:0 0 auto; min-width:130px;">
+        <label>Rol</label>
+        <select id="f-rol">
+          <option value="admin">Admin</option>
+          <option value="consulta">Consulta</option>
+        </select>
+      </div>
       <button class="btn-crear" id="btn-crear" onclick="crearUsuario()">Agregar</button>
     </div>
     <div id="form-msg" style="display:none"></div>
@@ -177,13 +189,14 @@ tbody td { padding: 10px 16px; }
         <tr>
           <th>Usuario</th>
           <th>Nombre</th>
+          <th>Rol</th>
           <th>Estado</th>
           <th>Creado</th>
           <th></th>
         </tr>
       </thead>
       <tbody id="tabla-usuarios">
-        <tr class="loading-row"><td colspan="5">Cargando…</td></tr>
+        <tr class="loading-row"><td colspan="6">Cargando…</td></tr>
       </tbody>
     </table>
   </div>
@@ -206,6 +219,13 @@ tbody td { padding: 10px 16px; }
       <div class="field">
         <label>Nombre completo</label>
         <input type="text" id="m-nombre" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>Rol</label>
+        <select id="m-rol">
+          <option value="admin">Admin</option>
+          <option value="consulta">Consulta</option>
+        </select>
       </div>
       <div class="field">
         <label>Nueva contraseña</label>
@@ -236,12 +256,13 @@ async function cargarUsuarios() {
       <tr id="row-${u.id}">
         <td><strong>${esc(u.usuario)}</strong></td>
         <td>${esc(u.nombre || '—')}</td>
+        <td><span class="badge ${u.rol === 'consulta' ? 'badge-consulta' : 'badge-admin'}">${u.rol === 'consulta' ? 'Consulta' : 'Admin'}</span></td>
         <td><span class="badge ${u.activo ? 'badge-activo' : 'badge-inactivo'}">${u.activo ? 'Activo' : 'Inactivo'}</span></td>
         <td>${formatFecha(u.creado_en)}</td>
         <td>
           <div class="acciones">
             <button class="btn-accion btn-editar"
-                    onclick="abrirModal(${u.id}, '${esc(u.usuario)}', '${esc(u.nombre || '')}')">
+                    onclick="abrirModal(${u.id}, '${esc(u.usuario)}', '${esc(u.nombre || '')}', '${u.rol || 'admin'}')">
               Editar
             </button>
             <button class="btn-accion ${u.activo ? 'btn-desactivar' : 'btn-activar'}"
@@ -261,6 +282,7 @@ async function crearUsuario() {
   const usuario  = document.getElementById('f-usuario').value.trim();
   const nombre   = document.getElementById('f-nombre').value.trim();
   const password = document.getElementById('f-password').value;
+  const rol      = document.getElementById('f-rol').value;
   const btn      = document.getElementById('btn-crear');
 
   if (!usuario || !password) { mostrarMsg('form-msg', 'Completa usuario y contraseña', false); return; }
@@ -271,7 +293,7 @@ async function crearUsuario() {
     const r = await fetch('/api/admin/usuarios', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ usuario, nombre, password }),
+      body: JSON.stringify({ usuario, nombre, password, rol }),
     });
     if (r.status === 401) { location.href = '/login'; return; }
     const d = await r.json();
@@ -280,6 +302,7 @@ async function crearUsuario() {
       document.getElementById('f-usuario').value  = '';
       document.getElementById('f-nombre').value   = '';
       document.getElementById('f-password').value = '';
+      document.getElementById('f-rol').value      = 'admin';
       cargarUsuarios();
     } else {
       mostrarMsg('form-msg', d.mensaje || 'Error al crear usuario', false);
@@ -306,10 +329,11 @@ async function toggleUsuario(id, activoActual) {
   }
 }
 
-function abrirModal(id, usuario, nombre) {
+function abrirModal(id, usuario, nombre, rol) {
   document.getElementById('m-id').value       = id;
   document.getElementById('m-usuario').value  = usuario;
   document.getElementById('m-nombre').value   = nombre;
+  document.getElementById('m-rol').value      = rol || 'admin';
   document.getElementById('m-password').value = '';
   document.getElementById('modal-msg').style.display = 'none';
   document.getElementById('modal-overlay').classList.add('visible');
@@ -325,6 +349,7 @@ async function guardarEdicion() {
   const id       = parseInt(document.getElementById('m-id').value);
   const usuario  = document.getElementById('m-usuario').value.trim();
   const nombre   = document.getElementById('m-nombre').value.trim();
+  const rol      = document.getElementById('m-rol').value;
   const password = document.getElementById('m-password').value;
   const btn      = document.getElementById('btn-guardar');
 
@@ -333,7 +358,7 @@ async function guardarEdicion() {
 
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
-    const body = { usuario, nombre };
+    const body = { usuario, nombre, rol };
     if (password) body.password = password;
     const r = await fetch(`/api/admin/usuarios/${id}`, {
       method: 'PUT',

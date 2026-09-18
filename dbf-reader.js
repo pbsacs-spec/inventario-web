@@ -110,8 +110,11 @@ async function crearTablas() {
     password_hash VARCHAR(255) NOT NULL,
     nombre        VARCHAR(100),
     activo        TINYINT(1) DEFAULT 1,
+    rol           VARCHAR(20) DEFAULT 'admin',
     creado_en     DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
+  // Migración para DBs existentes sin columna rol
+  try { await query("ALTER TABLE usuarios ADD COLUMN rol VARCHAR(20) DEFAULT 'admin'"); } catch (_) {}
   await query(`CREATE TABLE IF NOT EXISTS consultas_log (
     id         INT AUTO_INCREMENT PRIMARY KEY,
     usuario_id INT,
@@ -136,10 +139,10 @@ async function contarUsuarios() {
   return rows[0].n;
 }
 
-async function crearUsuario(usuario, password_hash, nombre) {
+async function crearUsuario(usuario, password_hash, nombre, rol = 'admin') {
   await query(
-    'INSERT INTO usuarios (usuario, password_hash, nombre) VALUES (?, ?, ?)',
-    [usuario, password_hash, nombre || usuario],
+    'INSERT INTO usuarios (usuario, password_hash, nombre, rol) VALUES (?, ?, ?, ?)',
+    [usuario, password_hash, nombre || usuario, rol],
   );
 }
 
@@ -151,7 +154,7 @@ async function registrarConsulta(usuario_id, usuario, consulta, tipo, ip) {
 }
 
 async function listarUsuarios() {
-  return query('SELECT id, usuario, nombre, activo, creado_en FROM usuarios ORDER BY creado_en DESC');
+  return query('SELECT id, usuario, nombre, activo, rol, creado_en FROM usuarios ORDER BY creado_en DESC');
 }
 
 async function toggleUsuario(id) {
@@ -178,9 +181,10 @@ async function importarSQL(sql) {
 async function actualizarUsuario(id, campos) {
   const sets = [];
   const vals = [];
-  if (campos.nombre   !== undefined) { sets.push('nombre = ?');        vals.push(campos.nombre); }
-  if (campos.usuario  !== undefined) { sets.push('usuario = ?');       vals.push(campos.usuario); }
+  if (campos.nombre        !== undefined) { sets.push('nombre = ?');        vals.push(campos.nombre); }
+  if (campos.usuario       !== undefined) { sets.push('usuario = ?');       vals.push(campos.usuario); }
   if (campos.password_hash !== undefined) { sets.push('password_hash = ?'); vals.push(campos.password_hash); }
+  if (campos.rol           !== undefined) { sets.push('rol = ?');           vals.push(campos.rol); }
   if (!sets.length) return;
   vals.push(id);
   await query(`UPDATE usuarios SET ${sets.join(', ')} WHERE id = ?`, vals);

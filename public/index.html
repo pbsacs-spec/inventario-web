@@ -214,7 +214,7 @@ pre {
   <h1>Consulta de Inventario</h1>
   <div class="user-info">
     <span class="user-name" id="userName"></span>
-    <a class="btn-logout" href="/admin">Admin</a>
+    <a class="btn-logout" id="btn-admin" href="/admin" style="display:none">Admin</a>
     <a class="btn-logout" href="/auth/logout">Salir</a>
   </div>
 </header>
@@ -251,7 +251,10 @@ let ultimaConsulta = '';
     const r = await fetch('/api/me');
     if (r.status === 401) { location.href = '/login'; return; }
     const d = await r.json();
-    if (d.ok) document.getElementById('userName').textContent = d.nombre;
+    if (d.ok) {
+      document.getElementById('userName').textContent = d.nombre;
+      if (d.rol === 'admin') document.getElementById('btn-admin').style.display = '';
+    }
   } catch (_) {}
 })();
 
