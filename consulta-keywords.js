@@ -5,7 +5,6 @@ const {
   limpiarCache,
   buscarClientes,
 } = require('./dbf-reader');
-const { migrar } = require('./migrar');
 
 // ── Extracción de parámetros ─────────────────────────────────────────────────
 
