@@ -65,19 +65,35 @@ function generarPdfBuffer(pdfData, numero, cliente) {
     if (isRaw) {
       const { columnas, alineacion, filas } = pdfData;
 
-      // Medir anchos reales con el doc ya creado
+      // Medir anchos reales con el doc ya creado (incluyendo totalRow)
       const colWidthsNat = columnas.map((h, i) => {
         doc.font('Helvetica-Bold').fontSize(HEADER_SIZE);
         let w = doc.widthOfString(h) + CELL_PAD * 2;
         doc.font('Helvetica').fontSize(BODY_SIZE);
         for (const row of filas)
           w = Math.max(w, doc.widthOfString(String(row[i] ?? '')) + CELL_PAD * 2);
+        if (pdfData.totalRow && pdfData.totalRow[i] != null) {
+          doc.font('Helvetica-Bold').fontSize(BODY_SIZE);
+          w = Math.max(w, doc.widthOfString(String(pdfData.totalRow[i])) + CELL_PAD * 2);
+          doc.font('Helvetica').fontSize(BODY_SIZE);
+        }
         return w;
       });
 
       const totalNat = colWidthsNat.reduce((a, b) => a + b, 0);
-      const scale    = totalNat > PAGE_W ? PAGE_W / totalNat : 1;
-      const colWidths = colWidthsNat.map(w => w * scale);
+      let colWidths;
+      if (totalNat >= PAGE_W) {
+        const scale = PAGE_W / totalNat;
+        colWidths = colWidthsNat.map(w => w * scale);
+      } else {
+        // Expandir columnas de texto para llenar la hoja completa
+        const extra    = PAGE_W - totalNat;
+        const textIdxs = alineacion.map((a, i) => a === 'left' ? i : -1).filter(i => i >= 0);
+        const targets  = textIdxs.length > 0 ? textIdxs : columnas.map((_, i) => i);
+        colWidths = colWidthsNat.map((w, i) =>
+          targets.includes(i) ? w + extra / targets.length : w
+        );
+      }
 
       function rowHeight(row) {
         doc.font('Helvetica').fontSize(BODY_SIZE);
