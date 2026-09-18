@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consulta de Inventario</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #2c3e50; min-height: 100vh; }
+
+header {
+  background: #1a2535;
+  color: white;
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+header .icon { font-size: 1.5rem; }
+header h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: 0.3px; }
+
+.container { max-width: 1280px; margin: 0 auto; padding: 24px 20px; }
+
+.search-card {
+  background: white;
+  border-radius: 10px;
+  padding: 20px 22px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  margin-bottom: 18px;
+}
+.search-row { display: flex; gap: 10px; }
+#q {
+  flex: 1;
+  padding: 10px 15px;
+  border: 2px solid #dde3ec;
+  border-radius: 7px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color .18s;
+  background: #f8f9fb;
+}
+#q:focus { border-color: #3a85d8; background: white; }
+#q::placeholder { color: #a0aab8; }
+
+.btn {
+  padding: 10px 22px;
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background .15s, transform .1s;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: #3a85d8; color: white; }
+.btn-primary:hover { background: #2d6db8; }
+
+.quick-buttons { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
+.qbtn {
+  padding: 5px 14px;
+  border: 1.5px solid #c9d5e3;
+  border-radius: 20px;
+  background: #f4f7fb;
+  color: #445;
+  cursor: pointer;
+  font-size: 0.83rem;
+  font-weight: 500;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.qbtn:hover { background: #3a85d8; border-color: #3a85d8; color: white; }
+
+#resultado { min-height: 60px; }
+
+.placeholder {
+  text-align: center;
+  padding: 52px 0;
+  color: #a0aab8;
+  font-size: 0.95rem;
+}
+.placeholder .ph-icon { font-size: 2.8rem; display: block; margin-bottom: 10px; opacity: .45; }
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 52px 0;
+  color: #7f8c8d;
+  font-size: 0.93rem;
+}
+.spinner {
+  width: 22px; height: 22px;
+  border: 3px solid #dde;
+  border-top-color: #3a85d8;
+  border-radius: 50%;
+  animation: spin .75s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.result-card {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 18px;
+  background: #f6f8fa;
+  border-bottom: 1px solid #e8ecf0;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.result-meta { font-size: 0.87rem; color: #637083; }
+.result-meta strong { color: #2c3e50; font-weight: 700; }
+.result-query {
+  font-size: 0.82rem;
+  color: #a0aab8;
+  font-style: italic;
+  margin-top: 2px;
+}
+
+.export-buttons { display: flex; gap: 8px; }
+.ebtn {
+  padding: 5px 14px;
+  border-radius: 5px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  display: inline-block;
+  transition: background .14s;
+}
+.ebtn-pdf { background: #e8413a; color: white; }
+.ebtn-pdf:hover { background: #c0342e; }
+.ebtn-txt { background: #27a865; color: white; }
+.ebtn-txt:hover { background: #1e8650; }
+
+.table-wrap {
+  overflow: auto;
+  max-height: 66vh;
+}
+table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+thead th {
+  position: sticky;
+  top: 0;
+  background: #1a2535;
+  color: #cdd8e8;
+  padding: 9px 14px;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  z-index: 1;
+}
+tbody tr { border-bottom: 1px solid #f0f2f5; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #f4f7fd; }
+tbody td { padding: 7px 14px; white-space: nowrap; color: #2c3e50; }
+tbody tr:nth-child(even) { background: #fafbfc; }
+tbody tr:nth-child(even):hover { background: #f4f7fd; }
+
+.text-result { padding: 20px 22px; }
+pre {
+  background: #f6f8fa;
+  border: 1px solid #e4e8ed;
+  border-radius: 6px;
+  padding: 14px 16px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.83rem;
+  line-height: 1.55;
+  overflow-x: auto;
+  white-space: pre;
+  color: #2c3e50;
+}
+
+.error-banner {
+  padding: 18px 22px;
+  color: #c0392b;
+  font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="icon">📦</span>
+  <h1>Consulta de Inventario</h1>
+</header>
+
+<div class="container">
+  <div class="search-card">
+    <div class="search-row">
+      <input type="text" id="q"
+        placeholder="Ej: resumen · busca organza · 0282LISBCO · 0282 general consig · busca liso general consig"
+        autocomplete="off" spellcheck="false" />
+      <button class="btn btn-primary" onclick="consultar()">Consultar</button>
+    </div>
+    <div class="quick-buttons">
+      <button class="qbtn" onclick="setQuery('resumen')">Resumen</button>
+      <button class="qbtn" onclick="setQuery('resumen general consig')">GENERAL vs CONSIG</button>
+      <button class="qbtn" onclick="setQuery('categorías')">Categorías</button>
+      <button class="qbtn" onclick="setQuery('ayuda')">Ayuda</button>
+    </div>
+  </div>
+
+  <div id="resultado">
+    <div class="placeholder">
+      <span class="ph-icon">🔍</span>
+      Ingresa una consulta o selecciona una opción rápida
+    </div>
+  </div>
+</div>
+
+<script>
+let ultimaConsulta = '';
+
+function setQuery(q) {
+  document.getElementById('q').value = q;
+  consultar();
+}
+
+document.getElementById('q').addEventListener('keydown', e => {
+  if (e.key === 'Enter') consultar();
+});
+
+async function consultar() {
+  const q = document.getElementById('q').value.trim();
+  if (!q) return;
+  ultimaConsulta = q;
+
+  document.getElementById('resultado').innerHTML =
+    '<div class="loading"><div class="spinner"></div>Consultando…</div>';
+
+  try {
+    const res = await fetch('/api/consulta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q }),
+    });
+    const data = await res.json();
+    renderResultado(data);
+  } catch (err) {
+    document.getElementById('resultado').innerHTML =
+      `<div class="result-card"><div class="error-banner">⚠️ Error de conexión: ${esc(err.message)}</div></div>`;
+  }
+}
+
+function renderResultado(data) {
+  const div = document.getElementById('resultado');
+
+  if (data.tipo === 'error') {
+    div.innerHTML = `<div class="result-card"><div class="error-banner">⚠️ ${esc(data.mensaje)}</div></div>`;
+    return;
+  }
+
+  if (data.tipo === 'texto') {
+    div.innerHTML = `
+      <div class="result-card">
+        <div class="result-header">
+          <div>
+            <div class="result-meta">Resultado</div>
+            <div class="result-query">${esc(data.consulta || ultimaConsulta)}</div>
+          </div>
+        </div>
+        <div class="text-result"><pre>${esc(data.contenido || '')}</pre></div>
+      </div>`;
+    return;
+  }
+
+  if (data.tipo === 'tabla') {
+    const { columnas, alineacion, filas } = data;
+    const qenc = encodeURIComponent(data.consulta || ultimaConsulta);
+    const n = filas.length;
+
+    const thead = '<tr>' + columnas.map((c, i) =>
+      `<th style="text-align:${alineacion[i]}">${esc(c)}</th>`
+    ).join('') + '</tr>';
+
+    const tbody = filas.map(fila =>
+      '<tr>' + fila.map((cell, i) =>
+        `<td style="text-align:${alineacion[i]}">${esc(String(cell ?? ''))}</td>`
+      ).join('') + '</tr>'
+    ).join('');
+
+    div.innerHTML = `
+      <div class="result-card">
+        <div class="result-header">
+          <div>
+            <div class="result-meta"><strong>${n}</strong> ${n === 1 ? 'fila' : 'filas'}</div>
+            <div class="result-query">${esc(data.consulta || ultimaConsulta)}</div>
+          </div>
+          <div class="export-buttons">
+            <a class="ebtn ebtn-pdf" href="/api/pdf?q=${qenc}" download="resultados.pdf">⬇ PDF</a>
+            <a class="ebtn ebtn-txt" href="/api/txt?q=${qenc}" download="resultados.txt">⬇ TXT</a>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table><thead>${thead}</thead><tbody>${tbody}</tbody></table>
+        </div>
+      </div>`;
+  }
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>

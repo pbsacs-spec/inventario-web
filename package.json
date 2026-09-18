@@ -1,0 +1,18 @@
+{
+  "name": "inventario-web",
+  "version": "1.0.0",
+  "description": "Consulta de inventario — interfaz web pública",
+  "main": "servidor.js",
+  "scripts": {
+    "start": "node servidor.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "pdfkit": "^0.15.0"
+  }
+}
