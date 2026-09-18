@@ -11,6 +11,8 @@ const {
   contarUsuarios,
   crearUsuario,
   registrarConsulta,
+  listarUsuarios,
+  toggleUsuario,
 } = require('./dbf-reader');
 
 const app  = express();
@@ -193,6 +195,47 @@ app.get('/api/txt', requireAuth, async (req, res) => {
     return res.send(limpio);
   } catch (err) {
     res.status(500).send('Error al generar TXT: ' + err.message);
+  }
+});
+
+// ── Admin: gestión de usuarios ────────────────────────────────────────────────
+
+app.get('/admin', (req, res) => {
+  if (!req.session || !req.session.userId) return res.redirect('/login');
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+app.get('/api/admin/usuarios', requireAuth, async (req, res) => {
+  try {
+    const usuarios = await listarUsuarios();
+    res.json({ ok: true, usuarios });
+  } catch (err) {
+    res.status(500).json({ ok: false, mensaje: err.message });
+  }
+});
+
+app.post('/api/admin/usuarios', requireAuth, async (req, res) => {
+  const { usuario, password, nombre } = req.body;
+  if (!usuario || !password) return res.status(400).json({ ok: false, mensaje: 'Usuario y contraseña requeridos' });
+  try {
+    const existe = await buscarUsuario(usuario);
+    if (existe) return res.status(409).json({ ok: false, mensaje: 'El usuario ya existe' });
+    const hash = await bcrypt.hash(password, 10);
+    await crearUsuario(usuario, hash, nombre || usuario);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, mensaje: err.message });
+  }
+});
+
+app.post('/api/admin/usuarios/:id/toggle', requireAuth, async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (id === req.session.userId) return res.status(400).json({ ok: false, mensaje: 'No puedes desactivar tu propia cuenta' });
+  try {
+    await toggleUsuario(id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, mensaje: err.message });
   }
 });
 

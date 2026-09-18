@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Administración de usuarios · Inventario</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #2c3e50; min-height: 100vh; }
+
+header {
+  background: #1a2535;
+  color: white;
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+header .icon { font-size: 1.5rem; }
+header h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: 0.3px; flex: 1; }
+.header-links { display: flex; gap: 10px; align-items: center; }
+.btn-nav {
+  padding: 5px 13px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 5px;
+  color: white;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .14s;
+}
+.btn-nav:hover { background: rgba(255,255,255,0.22); }
+
+.container { max-width: 860px; margin: 0 auto; padding: 28px 20px; display: flex; flex-direction: column; gap: 22px; }
+
+.card {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+.card-header {
+  padding: 14px 20px;
+  background: #f6f8fa;
+  border-bottom: 1px solid #e8ecf0;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #1a2535;
+}
+
+/* Formulario nuevo usuario */
+.form-body { padding: 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 160px; }
+label { font-size: 0.82rem; font-weight: 600; color: #445; }
+input {
+  padding: 9px 13px;
+  border: 2px solid #dde3ec;
+  border-radius: 7px;
+  font-size: 0.9rem;
+  outline: none;
+  background: #f8f9fb;
+}
+input:focus { border-color: #3a85d8; background: white; }
+.btn-crear {
+  padding: 10px 22px;
+  background: #1a2535;
+  color: white;
+  border: none;
+  border-radius: 7px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .14s;
+  align-self: flex-end;
+}
+.btn-crear:hover { background: #253550; }
+.btn-crear:disabled { background: #8a9ab0; cursor: default; }
+
+.msg { padding: 9px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 500; margin: 0 20px 16px; }
+.msg-ok  { background: #edfaf3; color: #1a7a45; border: 1px solid #b2e8cc; }
+.msg-err { background: #fdf2f2; color: #c0392b; border: 1px solid #f5c6cb; }
+
+/* Tabla de usuarios */
+table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+thead th {
+  background: #1a2535;
+  color: #cdd8e8;
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+tbody tr { border-bottom: 1px solid #f0f2f5; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #f9fafb; }
+tbody td { padding: 10px 16px; }
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.badge-activo   { background: #edfaf3; color: #1a7a45; }
+.badge-inactivo { background: #f5f5f5; color: #888; }
+
+.btn-toggle {
+  padding: 5px 14px;
+  border-radius: 5px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background .14s;
+}
+.btn-desactivar { background: #fdecea; color: #c0392b; }
+.btn-desactivar:hover { background: #f5c6c2; }
+.btn-activar    { background: #edfaf3; color: #1a7a45; }
+.btn-activar:hover { background: #b2e8cc; }
+.btn-toggle:disabled { opacity: .45; cursor: default; }
+
+.empty { padding: 36px; text-align: center; color: #a0aab8; font-size: 0.9rem; }
+.loading-row td { text-align: center; padding: 28px; color: #a0aab8; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="icon">⚙️</span>
+  <h1>Administración de usuarios</h1>
+  <div class="header-links">
+    <a class="btn-nav" href="/">← Inventario</a>
+    <a class="btn-nav" href="/auth/logout">Salir</a>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Nuevo usuario -->
+  <div class="card">
+    <div class="card-header">Agregar usuario</div>
+    <div class="form-body">
+      <div class="field">
+        <label>Usuario</label>
+        <input type="text" id="f-usuario" placeholder="ej: vendedor1" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>Nombre completo</label>
+        <input type="text" id="f-nombre" placeholder="Opcional" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <input type="password" id="f-password" placeholder="Mínimo 6 caracteres" />
+      </div>
+      <button class="btn-crear" id="btn-crear" onclick="crearUsuario()">Agregar</button>
+    </div>
+    <div id="form-msg" style="display:none"></div>
+  </div>
+
+  <!-- Lista de usuarios -->
+  <div class="card">
+    <div class="card-header">Usuarios registrados</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Nombre</th>
+          <th>Estado</th>
+          <th>Creado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tabla-usuarios">
+        <tr class="loading-row"><td colspan="5">Cargando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+async function cargarUsuarios() {
+  const tbody = document.getElementById('tabla-usuarios');
+  try {
+    const r = await fetch('/api/admin/usuarios');
+    if (r.status === 401) { location.href = '/login'; return; }
+    const d = await r.json();
+    if (!d.ok || !d.usuarios.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty">No hay usuarios registrados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = d.usuarios.map(u => `
+      <tr id="row-${u.id}">
+        <td><strong>${esc(u.usuario)}</strong></td>
+        <td>${esc(u.nombre || '—')}</td>
+        <td><span class="badge ${u.activo ? 'badge-activo' : 'badge-inactivo'}">${u.activo ? 'Activo' : 'Inactivo'}</span></td>
+        <td>${formatFecha(u.creado_en)}</td>
+        <td>
+          <button class="btn-toggle ${u.activo ? 'btn-desactivar' : 'btn-activar'}"
+                  onclick="toggleUsuario(${u.id}, ${u.activo})">
+            ${u.activo ? 'Desactivar' : 'Activar'}
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (_) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">Error al cargar usuarios</td></tr>';
+  }
+}
+
+async function crearUsuario() {
+  const usuario  = document.getElementById('f-usuario').value.trim();
+  const nombre   = document.getElementById('f-nombre').value.trim();
+  const password = document.getElementById('f-password').value;
+  const btn      = document.getElementById('btn-crear');
+  const msgDiv   = document.getElementById('form-msg');
+
+  if (!usuario || !password) { mostrarMsg('Completa usuario y contraseña', false); return; }
+  if (password.length < 6)   { mostrarMsg('La contraseña debe tener al menos 6 caracteres', false); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+  try {
+    const r = await fetch('/api/admin/usuarios', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario, nombre, password }),
+    });
+    if (r.status === 401) { location.href = '/login'; return; }
+    const d = await r.json();
+    if (d.ok) {
+      mostrarMsg(`Usuario "${usuario}" creado correctamente`, true);
+      document.getElementById('f-usuario').value  = '';
+      document.getElementById('f-nombre').value   = '';
+      document.getElementById('f-password').value = '';
+      cargarUsuarios();
+    } else {
+      mostrarMsg(d.mensaje || 'Error al crear usuario', false);
+    }
+  } catch (_) {
+    mostrarMsg('Error de conexión', false);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Agregar';
+  }
+}
+
+async function toggleUsuario(id, activoActual) {
+  const fila = document.getElementById('row-' + id);
+  const btn  = fila.querySelector('button');
+  btn.disabled = true;
+  try {
+    const r = await fetch(`/api/admin/usuarios/${id}/toggle`, { method: 'POST' });
+    if (r.status === 401) { location.href = '/login'; return; }
+    const d = await r.json();
+    if (d.ok) {
+      cargarUsuarios();
+    } else {
+      alert(d.mensaje || 'Error');
+      btn.disabled = false;
+    }
+  } catch (_) {
+    alert('Error de conexión');
+    btn.disabled = false;
+  }
+}
+
+function mostrarMsg(texto, ok) {
+  const div = document.getElementById('form-msg');
+  div.className = 'msg ' + (ok ? 'msg-ok' : 'msg-err');
+  div.textContent = texto;
+  div.style.display = 'block';
+  setTimeout(() => { div.style.display = 'none'; }, 4000);
+}
+
+function formatFecha(f) {
+  if (!f) return '—';
+  const d = new Date(f);
+  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+cargarUsuarios();
+</script>
+</body>
+</html>

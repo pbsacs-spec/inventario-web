@@ -149,7 +149,16 @@ async function registrarConsulta(usuario_id, usuario, consulta, tipo, ip) {
   );
 }
 
+async function listarUsuarios() {
+  return query('SELECT id, usuario, nombre, activo, creado_en FROM usuarios ORDER BY creado_en DESC');
+}
+
+async function toggleUsuario(id) {
+  await query('UPDATE usuarios SET activo = NOT activo WHERE id = ?', [id]);
+}
+
 module.exports = {
   consultarExistencias, resumenPorCategoria, listarCategorias, buscarClientes, limpiarCache,
   crearTablas, buscarUsuario, contarUsuarios, crearUsuario, registrarConsulta,
+  listarUsuarios, toggleUsuario,
 };
