@@ -258,4 +258,5 @@ module.exports = { migrar, migrarClientes, migrarAgentes };
 
 if (require.main === module) {
   migrar();
+  require('./exportar-mysql');
 }
