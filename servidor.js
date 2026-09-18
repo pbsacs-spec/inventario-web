@@ -15,6 +15,7 @@ const {
   toggleUsuario,
   actualizarUsuario,
   importarSQL,
+  buscarClientes,
 } = require('./dbf-reader');
 
 const app  = express();
@@ -205,6 +206,23 @@ app.get('/api/txt', requireAuth, async (req, res) => {
     return res.send(limpio);
   } catch (err) {
     res.status(500).send('Error al generar TXT: ' + err.message);
+  }
+});
+
+// ── Clientes ──────────────────────────────────────────────────────────────────
+
+app.get('/clientes', (req, res) => {
+  if (!req.session || !req.session.userId) return res.redirect('/login');
+  res.sendFile(path.join(__dirname, 'public', 'clientes.html'));
+});
+
+app.get('/api/clientes', requireAuth, async (req, res) => {
+  const q = (req.query.q || '').trim();
+  try {
+    const clientes = await buscarClientes(q ? { termino: q } : {});
+    res.json({ ok: true, clientes, total: clientes.length });
+  } catch (err) {
+    res.status(500).json({ ok: false, mensaje: err.message });
   }
 });
 
