@@ -262,7 +262,9 @@ async function cargarUsuarios() {
         <td>
           <div class="acciones">
             <button class="btn-accion btn-editar"
-                    onclick="abrirModal(${u.id}, '${esc(u.usuario)}', '${esc(u.nombre || '')}', '${u.rol || 'admin'}')">
+                    data-id="${u.id}" data-usuario="${esc(u.usuario)}"
+                    data-nombre="${esc(u.nombre || '')}" data-rol="${esc(u.rol || 'admin')}"
+                    onclick="abrirModal(this.dataset)">
               Editar
             </button>
             <button class="btn-accion ${u.activo ? 'btn-desactivar' : 'btn-activar'}"
@@ -329,7 +331,7 @@ async function toggleUsuario(id, activoActual) {
   }
 }
 
-function abrirModal(id, usuario, nombre, rol) {
+function abrirModal({ id, usuario, nombre, rol }) {
   document.getElementById('m-id').value       = id;
   document.getElementById('m-usuario').value  = usuario;
   document.getElementById('m-nombre').value   = nombre;

@@ -8,6 +8,7 @@ const { generarPdfBuffer } = require('./pdf-gen');
 const {
   crearTablas,
   buscarUsuario,
+  buscarUsuarioPorId,
   contarUsuarios,
   crearUsuario,
   registrarConsulta,
@@ -39,6 +40,28 @@ app.use(session({
 }));
 
 crearTablas().catch(err => console.error('Error al crear tablas auth:', err));
+
+// Revalida la sesión contra la BD en cada petición: un usuario desactivado
+// pierde el acceso y un cambio de rol aplica de inmediato.
+app.use(async (req, res, next) => {
+  if (!req.session || !req.session.userId) return next();
+  try {
+    const user = await buscarUsuarioPorId(req.session.userId);
+    if (!user) {
+      return req.session.destroy(() => {
+        if (req.path.startsWith('/api/'))
+          return res.status(401).json({ tipo: 'error', ok: false, mensaje: 'Sesión expirada. Recarga la página.' });
+        res.redirect('/login');
+      });
+    }
+    req.session.usuario = user.usuario;
+    req.session.nombre  = user.nombre || user.usuario;
+    req.session.rol     = user.rol || 'admin';
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 // ── Autenticación ─────────────────────────────────────────────────────────────
 
@@ -299,13 +322,15 @@ app.get('/api/ajustes/productos', requireAdmin, async (req, res) => {
 });
 
 app.post('/api/ajustes/movimientos', requireAdmin, async (req, res) => {
-  const { tipo, concepto_id, concepto, cve_prod, lugar, cantidad, notas } = req.body;
-  if (!['entrada', 'salida'].includes(tipo) || !cve_prod || !lugar || !(cantidad > 0))
+  const { tipo, concepto_id, cve_prod, lugar, notas } = req.body;
+  const cantidad   = parseFloat(req.body.cantidad);
+  const conceptoId = parseInt(concepto_id);
+  if (!['entrada', 'salida'].includes(tipo) || !cve_prod || !lugar ||
+      !Number.isFinite(cantidad) || cantidad <= 0 || !conceptoId)
     return res.status(400).json({ ok: false, mensaje: 'Datos incompletos o inválidos' });
   try {
     await registrarMovimiento({
-      tipo, concepto_id, concepto, cve_prod, lugar,
-      cantidad: parseFloat(cantidad), notas,
+      tipo, concepto_id: conceptoId, cve_prod, lugar, cantidad, notas,
       usuario_id: req.session.userId, usuario: req.session.usuario,
     });
     res.json({ ok: true });

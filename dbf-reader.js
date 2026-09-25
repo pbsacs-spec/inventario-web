@@ -166,6 +166,14 @@ async function buscarUsuario(usuario) {
   return rows[0] || null;
 }
 
+async function buscarUsuarioPorId(id) {
+  const rows = await query(
+    'SELECT id, usuario, nombre, rol FROM usuarios WHERE id = ? AND activo = 1 LIMIT 1',
+    [id],
+  );
+  return rows[0] || null;
+}
+
 async function contarUsuarios() {
   const rows = await query('SELECT COUNT(*) AS n FROM usuarios');
   return rows[0].n;
@@ -278,14 +286,31 @@ async function buscarProductosParaMovimiento(termino) {
   );
 }
 
-async function registrarMovimiento({ tipo, concepto_id, concepto, cve_prod, lugar, cantidad, notas, usuario_id, usuario }) {
+async function registrarMovimiento({ tipo, concepto_id, cve_prod, lugar, cantidad, notas, usuario_id, usuario }) {
   const conn = await getPool().getConnection();
   try {
     await conn.beginTransaction();
+
+    // El concepto debe existir, estar activo y corresponder al tipo de movimiento
+    const [conc] = await conn.execute(
+      'SELECT nombre, tipo FROM conceptos_movimiento WHERE id = ? AND activo = 1', [concepto_id]
+    );
+    if (!conc[0]) throw new Error('Concepto no válido o inactivo');
+    if (conc[0].tipo !== tipo) throw new Error(`El concepto "${conc[0].nombre}" no es de tipo ${tipo}`);
+
+    // Bloquear la fila para que dos salidas simultáneas no dejen el stock negativo
+    const [actual] = await conn.execute(
+      `SELECT existencia FROM existencias
+       WHERE UPPER(cve_prod) = UPPER(?) AND UPPER(lugar) = UPPER(?) FOR UPDATE`,
+      [cve_prod, lugar]
+    );
+    if (tipo === 'salida' && actual[0] && Number(actual[0].existencia) < cantidad)
+      throw new Error(`Existencia insuficiente: hay ${Number(actual[0].existencia)} en "${lugar}"`);
+
     await conn.execute(
       `INSERT INTO movimientos (tipo, concepto_id, concepto, cve_prod, lugar, cantidad, notas, usuario_id, usuario)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [tipo, concepto_id || null, concepto || '', cve_prod.toUpperCase(), lugar.toUpperCase(),
+      [tipo, concepto_id, conc[0].nombre, cve_prod.toUpperCase(), lugar.toUpperCase(),
        cantidad, notas || '', usuario_id, usuario]
     );
     const delta = tipo === 'entrada' ? cantidad : -cantidad;
@@ -336,7 +361,7 @@ async function listarMovimientos({ tipo, cve_prod, fecha_desde, fecha_hasta } = 
 
 module.exports = {
   consultarExistencias, resumenPorCategoria, listarCategorias, buscarClientes, limpiarCache,
-  crearTablas, buscarUsuario, contarUsuarios, crearUsuario, registrarConsulta,
+  crearTablas, buscarUsuario, buscarUsuarioPorId, contarUsuarios, crearUsuario, registrarConsulta,
   listarUsuarios, toggleUsuario, actualizarUsuario, importarSQL,
   listarConceptos, crearConcepto, toggleConcepto,
   buscarProductosParaMovimiento, registrarMovimiento, listarMovimientos,
